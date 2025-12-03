@@ -85,9 +85,26 @@ if 'search_results' not in st.session_state:
             st.session_state.search_results['view_diff'] = 0.0
         if 'duration_sec' not in st.session_state.search_results.columns:
             st.session_state.search_results['duration_sec'] = 0
+"""api_key.txt에서 API 키 로드"""
+""" 
+def load_api_key():
+
+    if os.path.exists('api_key.txt'):
+        try:
+            with open('api_key.txt', 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except:
+            pass
+    return ""
+"""    
 
 def load_api_key():
-    """api_key.txt에서 API 키 로드"""
+    """Secrets 또는 api_key.txt에서 API 키 로드"""
+    # 1순위: Streamlit Secrets 확인 (클라우드 배포용)
+    if "YOUTUBE_API_KEY" in st.secrets:
+        return st.secrets["YOUTUBE_API_KEY"]
+        
+    # 2순위: 로컬 파일 확인 (내 컴퓨터 테스트용)
     if os.path.exists('api_key.txt'):
         try:
             with open('api_key.txt', 'r', encoding='utf-8') as f:
