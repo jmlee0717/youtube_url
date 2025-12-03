@@ -85,6 +85,20 @@ def parse_iso_duration(duration_str):
     
     return total_seconds
 
+# === [새로 추가] 한국 시간 변환 함수 ===
+def convert_to_kst(utc_str):
+    """UTC 시간 문자열을 한국 시간(KST) 포맷으로 변환"""
+    if not utc_str: return ""
+    try:
+        # 1. 원본 시간 문자열 해석 (Z는 UTC를 의미)
+        dt_utc = datetime.strptime(utc_str, "%Y-%m-%dT%H:%M:%SZ")
+        # 2. 9시간 더하기 (한국 시간)
+        dt_kst = dt_utc + timedelta(hours=9)
+        # 3. 예쁜 모양으로 내보내기 (년-월-일 시:분)
+        return dt_kst.strftime("%Y-%m-%d %H:%M")
+    except Exception as e:
+        return utc_str # 에러나면 그냥 원본 반환    
+
 # Session State 초기화
 if 'search_results' not in st.session_state:
     saved_state = load_state()
@@ -452,7 +466,7 @@ def search_youtube(api_key, keyword, max_results, published_after=None, publishe
                         'view_count': view_count,
                         'subscriber_count': subscriber_count,
                         'comment_count': comment_count,
-                        'published_at': snippet.get('publishedAt', ''),
+                        'published_at': convert_to_kst(snippet.get('publishedAt', '')),
                         'view_sub_ratio': view_sub_ratio,
                         'view_diff': view_diff,
                         'avg_views': int(avg_views),  # [추가됨] 평균 조회수 저장
@@ -657,6 +671,9 @@ if not st.session_state.search_results.empty:
                     csv_columns = ['title', 'channel', 'url', 'view_count', 'subscriber_count', 
                                 'comment_count', 'published_at', 'view_sub_ratio', 'view_diff', 'duration_sec']
                     download_df = selected_rows[csv_columns].copy()
+
+                    # 👇 [추가] 컬럼 이름을 한글로 변경
+                    download_df = download_df.rename(columns={'published_at': '발행시간'})
                     
                     # CSV 변환 (Excel 한글 완벽 호환)
                     csv_buffer = io.BytesIO()
@@ -717,6 +734,11 @@ if not st.session_state.search_results.empty:
                 "comment_count": st.column_config.NumberColumn(
                     "댓글수", format="%d"
                 ),
+                # 👇 [여기!] 이 코드를 추가해주세요 👇
+                "published_at": st.column_config.TextColumn(
+                    "발행시간"
+                ),
+                # 👆 ---------------------------- 👆                
                 "view_sub_ratio": st.column_config.NumberColumn(
                     "조회/구독 비율", format="%.4f", help="영상 조회수 / 구독자수"
                 ),
