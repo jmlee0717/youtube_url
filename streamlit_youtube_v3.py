@@ -198,6 +198,22 @@ def get_video_comments(api_key, video_id):
         return all_c
     except: return []
 
+def run_api_test(api_key):
+    """API 키 연결 테스트 함수"""
+    if not api_key: return [("❌", "키를 입력해주세요.")]
+    try:
+        # 가벼운 쿼리로 테스트
+        build("youtube", "v3", developerKey=api_key).search().list(q="test", part="id", maxResults=1).execute()
+        return [("✅", "정상 연결되었습니다!")]
+    except HttpError as e:
+        if e.resp.status == 403:
+            return [("❌", "연결 실패: 할당량 초과 또는 권한 없음")]
+        return [("❌", f"연결 실패 (코드 {e.resp.status})")]
+    except Exception as e:
+        return [("❌", f"오류 발생: {str(e)}")]
+
+# 👆👆 [여기까지 추가] 👆👆
+
 @st.cache_data(show_spinner=False)
 def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
     if not api_key: return []
