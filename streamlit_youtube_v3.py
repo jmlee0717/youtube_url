@@ -318,6 +318,23 @@ with st.sidebar:
     st.header("🔑 기본 설정")
     st.caption("API Key 입력 (필수)")
     u_key = st.text_input("API Key", type="password", label_visibility="collapsed").strip()
+
+    # 👇👇 [여기부터 추가하세요] 👇👇
+    # ---------------------------------------------------------
+    # API 연결 확인 기능 (Expander)
+    # ---------------------------------------------------------
+    if u_key: # 키가 입력되었을 때만 표시
+        with st.expander("🛠️ API 연결 확인"):
+            if st.button("접속 테스트 실행", use_container_width=True):
+                # run_api_test 함수 호출 (코드 상단에 정의됨)
+                results = run_api_test(u_key)
+                for icon, msg in results:
+                    if icon == "✅":
+                        st.success(f"{icon} {msg}")
+                    else:
+                        st.error(f"{icon} {msg}")
+    # ---------------------------------------------------------
+    # 👆👆 [여기까지 추가] 👆👆    
     
     st.divider()
     
