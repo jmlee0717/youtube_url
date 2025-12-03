@@ -23,6 +23,31 @@ st.set_page_config(
     layout="wide"
 )
 
+# === 로그인(비밀번호) 인증 기능 ===
+def check_password():
+    """비밀번호 확인 함수"""
+    def password_entered():
+        if st.session_state["password"] == st.secrets["APP_PASSWORD"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"] 
+        else:
+            st.session_state["password_correct"] = False
+
+    if st.session_state.get("password_correct", False):
+        return True
+
+    st.text_input(
+        "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+    )
+    if "password_correct" in st.session_state:
+        st.error("😕 비밀번호가 틀렸습니다.")
+    return False
+
+if not check_password():
+    st.stop()
+# =================================
+
+
 # === Helper Functions ===
 
 def save_state(state_data):
@@ -85,6 +110,7 @@ if 'search_results' not in st.session_state:
             st.session_state.search_results['view_diff'] = 0.0
         if 'duration_sec' not in st.session_state.search_results.columns:
             st.session_state.search_results['duration_sec'] = 0
+
 def load_api_key():
     """Secrets 또는 api_key.txt에서 API 키 로드"""
     # 1순위: Streamlit Secrets 확인 (클라우드 배포용)
@@ -98,7 +124,7 @@ def load_api_key():
                 return f.read().strip()
         except:
             pass
-    return ""
+    return "" 
 
 # === 기능 1: 스크립트(자막) 추출 (yt-dlp 기반) ===
 def get_youtube_transcript(video_id):
@@ -216,8 +242,14 @@ def get_video_comments(api_key, video_id, max_results=20):
                 "date": comment["publishedAt"][:10] # YYYY-MM-DD
             })
         return comments
+
     except HttpError as e:
-        return [{"author": "System", "text": "댓글을 가져올 수 없습니다. (댓글 중지 또는 오류)", "likes": 0, "date": ""}]
+        if e.resp.status == 403 and "quotaExceeded" in str(e):
+            st.error("🚨 일일 사용량 초과로 댓글을 불러올 수 없습니다. 내일 다시 시도해주세요.")
+            return [{"author": "System", "text": "⛔ 일일 사용량 초과 (내일 오후 5시 리셋)", "likes": 0, "date": ""}]
+        
+        return [{"author": "System", "text": "댓글을 가져올 수 없습니다. (댓글 사용 중지됨)", "likes": 0, "date": ""}]
+
     except Exception as e:
         return [{"author": "Error", "text": str(e), "likes": 0, "date": ""}]
 
@@ -440,11 +472,21 @@ def search_youtube(api_key, keyword, max_results, published_after=None, publishe
         return results
         
     except HttpError as e:
-        st.error(f"YouTube API 오류: {e}")
+        # 에러 코드가 403이고, 메시지에 quotaExceeded가 포함된 경우
+        if e.resp.status == 403 and "quotaExceeded" in str(e):
+            st.error(
+                "🚨 **오늘의 유튜브 데이터 사용량(10,000 unit)이 모두 소진되었습니다!** 😢\n\n"
+                "구글 정책에 따라 **매일 오후 5시(한국시간)**에 사용량이 초기화됩니다.\n"
+                "내일 다시 방문해 주세요!", 
+                icon="🚫"
+            )
+        else:
+            st.error(f"YouTube API 오류: {e}")
         return []
     except Exception as e:
-        st.error(f"오류 발생: {e}")
+        st.error(f"알 수 없는 오류 발생: {e}")
         return []
+
 
 def run_api_test(api_key):
     """API 키 테스트"""
@@ -753,5 +795,4 @@ if not st.session_state.search_results.empty:
         st.divider()
         st.info(f"✅ 총 **{len(selected_rows)}**개 항목이 선택되었습니다.")
     elif len(selected_rows) > 0:
-
         st.info(f"✅ 총 **{len(selected_rows)}**개 항목이 선택되었습니다.")
