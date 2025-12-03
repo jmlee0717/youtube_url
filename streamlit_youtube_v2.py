@@ -76,6 +76,17 @@ if not check_password():
     st.stop()
 # =================================
 
+def save_editor_changes():
+    """List View 데이터 에디터 변경사항을 즉시 세션에 반영하는 콜백"""
+    # 현재 에디터의 변경된 상태를 가져옵니다.
+    state = st.session_state["list_view_editor"]
+    
+    # 변경된 행(row)을 하나씩 확인하며 원본 데이터(search_results)를 업데이트합니다.
+    # edited_rows는 {인덱스: {컬럼명: 변경된값}} 형태입니다.
+    for idx, changes in state["edited_rows"].items():
+        for col, val in changes.items():
+            # 인덱스(idx)를 정수형으로 변환하여 원본 데이터프레임의 해당 위치 값을 수정
+            st.session_state.search_results.at[int(idx), col] = val
 
 # === Helper Functions ===
 
@@ -707,7 +718,7 @@ if not st.session_state.search_results.empty:
             selected_count = len(st.session_state.search_results[st.session_state.search_results['selected']])
             filtered_count = len(filtered_df)
             st.caption(f"선택: **{selected_count}**개 / 표시: {filtered_count}개")
-            
+
         with sub_c4:
             # [수정] 리스트 모드가 아닐 때만(카드 모드 등) CSV 다운로드 버튼 표시
             if view_mode != "리스트":
@@ -755,7 +766,7 @@ if not st.session_state.search_results.empty:
         ]
 
         # 주의: 필터링된 DF를 편집하면 원본에 반영해야 함.
-        edited_df = st.data_editor(
+        st.data_editor(
             filtered_df,
             # ✅ [추가] 고유한 이름표(key)를 달아줘서 상태가 초기화되는 것을 막습니다.
             key="list_view_editor",
@@ -810,10 +821,11 @@ if not st.session_state.search_results.empty:
             disabled=["url", "title", "channel", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
             hide_index=True,
             width='stretch',
-            height=600
+            height=600,
+            on_change=save_editor_changes  # 👈 [핵심] 변경 즉시 저장하는 함수 호출
         )
         # 상태 업데이트: 편집된(체크박스) 내용을 원본 session_state에 병합
-        st.session_state.search_results.update(edited_df)
+        # st.session_state.search_results.update(edited_df)
         
     else: # 카드 보기
         # 그리드 레이아웃 (4열)
