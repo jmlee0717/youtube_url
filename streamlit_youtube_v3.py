@@ -332,8 +332,25 @@ st.markdown("""
 # --- Sidebar UI (이미지와 동일하게 구성) ---
 with st.sidebar:
     st.header("🔑 기본 설정")
+    #st.caption("API Key 입력 (필수)")
+    #u_key = st.text_input("API Key", type="password", label_visibility="collapsed").strip()
+
+    # 👇👇 [아래 코드로 교체하세요] 👇👇
+    
     st.caption("API Key 입력 (필수)")
-    u_key = st.text_input("API Key", type="password", label_visibility="collapsed").strip()
+    
+    # 1. URL(주소창)에 저장된 키가 있는지 확인
+    # (새로고침 해도 URL에 남아있는 정보를 가져옵니다)
+    query_params = st.query_params
+    saved_key = query_params.get("api_key", "")
+    
+    # 2. 입력창 생성 (저장된 키를 기본값으로 채워넣음)
+    u_key = st.text_input("API Key", value=saved_key, type="password", label_visibility="collapsed", key="api_key_input").strip()
+    
+    # 3. 입력값이 바뀌면 URL 업데이트 (새로고침 대비 저장)
+    if u_key != saved_key:
+        st.query_params["api_key"] = u_key
+
 
     # 👇👇 [여기부터 추가하세요] 👇👇
     # ---------------------------------------------------------
@@ -361,7 +378,7 @@ with st.sidebar:
         st.markdown(f"""
         **돈쭐파파 구독자**라면 제한 없이 사용하세요!
         
-        비밀번호는 **[제 유튜브 채널](https://youtube.com)**의 **최신 영상 더보기란**에 있습니다.
+        비밀번호는 [제 유튜브 채널](https://youtube.com@월천알고리즘)의 최신 영상 더보기란에 있습니다.
         """)
         
         st.caption("구독자 비밀번호")
