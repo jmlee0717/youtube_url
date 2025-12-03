@@ -13,6 +13,35 @@ import re
 import json
 import uuid
 
+import time
+import random
+
+# === [새로 추가] 글로벌 속도 제한 (신호등) ===
+@st.cache_resource
+class RateLimiter:
+    def __init__(self):
+        self.last_called = 0
+    
+    def try_acquire(self, min_interval=15):
+        """
+        요청이 너무 빠르면 거절하는 함수
+        :param min_interval: 최소 대기 시간 (초)
+        :return: (성공여부, 남은시간)
+        """
+        now = time.time()
+        elapsed = now - self.last_called
+        
+        if elapsed < min_interval:
+            # 아직 쿨타임이 안 찼으면 남은 시간 반환
+            return False, int(min_interval - elapsed) + 1
+        
+        # 통과! 마지막 실행 시간 갱신
+        self.last_called = now
+        return True, 0
+
+# 신호등 설치 (모든 사용자 공유)
+limiter = RateLimiter()
+
 # 상태 저장 파일명
 STATE_FILE = 'app_state.pkl'
 
@@ -146,6 +175,17 @@ def get_youtube_transcript(video_id):
     [yt-dlp] 자막 파일 다운로드 방식 (main.py 로직 이식)
     **수정사항: 5000자 길이 제한 제거 (전체 스크립트 추출)**
     """
+
+    # 1. [검문] 글로벌 신호등 확인 (최소 15초 간격)
+    success, wait_time = limiter.try_acquire(min_interval=15)
+    
+    if not success:
+        return None, f"🚦 접속자가 많아 대기 중입니다. {wait_time}초 뒤에 다시 시도해주세요."
+
+    # 2. [위장] 봇이 아닌 척 랜덤으로 1~3초 더 쉬었다가 출발 (Jitter)
+    time.sleep(random.uniform(1, 3))
+
+
     url = f"https://www.youtube.com/watch?v={video_id}"
     unique_id = str(uuid.uuid4())[:8]
     temp_filename = f"temp_sub_{unique_id}"
