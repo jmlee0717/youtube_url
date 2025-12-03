@@ -1,12 +1,5 @@
 # ============================================================================
-# [유튜브 떡상 채굴기] - UI/UX Final Version
-# ============================================================================
-# 
-# 【설정 요약】
-# 1. 사이드바 UI: 제공된 이미지 스타일 적용 (구독자 혜택 강조)
-# 2. 비밀번호: Secrets의 "SUB_PREFIX" + "현재월(2자리)" 자동 조합
-# 3. 기능 제한: 일반(Trial) vs 구독자(Pro) 차등 적용
-#
+# [유튜브 떡상 채굴기] - UI/UX & Bug Fixed Version
 # ============================================================================
 
 import streamlit as st
@@ -82,6 +75,11 @@ class UsageManager:
 
     def increment_script(self):
         if not self.is_pro(): st.session_state.usage_data['script_count'] += 1
+    
+    # [수정] 누락되었던 함수 추가됨
+    def get_status(self):
+        self.check_reset()
+        return st.session_state.usage_data
 
 usage_mgr = UsageManager()
 
@@ -163,7 +161,7 @@ def get_youtube_transcript(video_id):
         full_text = ""
         with open(files[0], 'r', encoding='utf-8') as f:
             content = f.read()
-            # JSON/VTT 파싱 로직 생략 (간소화) - 실제로는 이전 버전 로직 그대로 사용됨
+            # JSON/VTT 파싱 로직 간소화
             lines = [re.sub(r'<[^>]+>', '', l).strip() for l in content.splitlines()]
             full_text = " ".join([l for l in lines if l and '-->' not in l and l != 'WEBVTT' and not l.isdigit()])
             
