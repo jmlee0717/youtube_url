@@ -378,7 +378,7 @@ with st.sidebar:
         st.markdown(f"""
         **돈쭐파파 구독자**라면 제한 없이 사용하세요!
         
-        비밀번호는 [제 유튜브 채널](https://youtube.com@월천알고리즘)의 최신 영상 더보기란에 있습니다.
+        비밀번호는 [제 유튜브 채널](https://www.youtube.com/@%EC%9B%94%EC%B2%9C%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98)의 최신 영상 더보기란에 있습니다.
         """)
         
         st.caption("구독자 비밀번호")
