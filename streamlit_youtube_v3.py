@@ -309,7 +309,7 @@ def update_sel(idx): st.session_state.search_results.at[idx, 'selected'] = st.se
 
 st.title("⛏️ 유튜브 떡상 채굴기")
 st.markdown("""
-### 👉 알고리즘 깊은 곳에 숨겨진 **'황금 키워드'**와 **'대본'**을 캐내는 도구
+### 👉 알고리즘 깊은 곳에 숨겨진 '황금 키워드'와 '대본'을 캐내는 도구
 *"맨땅에 헤딩하지 마세요. 떡상 영상은 **채굴**하는 것입니다."*
 """)
 
@@ -430,20 +430,25 @@ if not st.session_state.search_results.empty:
                 st.session_state[f"chk_{i}"]=False
             st.rerun()
 
-    # 4. CSV 다운로드 (우측 끝)
+    # 4. CSV 다운로드 (우측 끝) - 리스트 뷰에서는 숨김 처리
     with c_top[3]:
-        sel_count = len(st.session_state.search_results[st.session_state.search_results['selected']])
-        st.caption(f"선택: {sel_count}개")
-        
-        if usage_mgr.is_pro():
-            sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
-            if not sel_rows.empty:
-                csv = sel_rows[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📥 CSV 다운로드", csv, "youtube_data.csv", "text/csv", use_container_width=True)
+        # [수정됨] 뷰 모드가 '카드'일 때만 다운로드 버튼 표시
+        if view == "카드":
+            sel_count = len(st.session_state.search_results[st.session_state.search_results['selected']])
+            st.caption(f"선택: {sel_count}개")
+            
+            if usage_mgr.is_pro():
+                sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
+                if not sel_rows.empty:
+                    csv = sel_rows[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
+                    st.download_button("📥 CSV 다운로드", csv, "youtube_data.csv", "text/csv", use_container_width=True)
+                else:
+                    st.button("📥 CSV 다운로드", disabled=True, use_container_width=True)
             else:
-                st.button("📥 CSV 다운로드", disabled=True, use_container_width=True)
+                st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="비밀번호 입력 시 활성화")
         else:
-            st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="비밀번호 입력 시 활성화")
+            # 리스트 뷰일 때는 아무것도 표시하지 않음
+            st.empty()
 
     # === [리스트 뷰] ===
     if view == "리스트":
