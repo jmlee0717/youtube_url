@@ -85,19 +85,6 @@ if 'search_results' not in st.session_state:
             st.session_state.search_results['view_diff'] = 0.0
         if 'duration_sec' not in st.session_state.search_results.columns:
             st.session_state.search_results['duration_sec'] = 0
-"""api_key.txt에서 API 키 로드"""
-""" 
-def load_api_key():
-
-    if os.path.exists('api_key.txt'):
-        try:
-            with open('api_key.txt', 'r', encoding='utf-8') as f:
-                return f.read().strip()
-        except:
-            pass
-    return ""
-"""    
-
 def load_api_key():
     """Secrets 또는 api_key.txt에서 API 키 로드"""
     # 1순위: Streamlit Secrets 확인 (클라우드 배포용)
@@ -755,4 +742,5 @@ if not st.session_state.search_results.empty:
         st.divider()
         st.info(f"✅ 총 **{len(selected_rows)}**개 항목이 선택되었습니다.")
     elif len(selected_rows) > 0:
+
         st.info(f"✅ 총 **{len(selected_rows)}**개 항목이 선택되었습니다.")
