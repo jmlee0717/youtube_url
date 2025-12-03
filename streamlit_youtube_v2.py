@@ -681,26 +681,33 @@ if not st.session_state.search_results.empty:
     # 전체 선택/해제 버튼 및 CSV 다운로드 (필터링된 항목 대상)
     with col_action:
         sub_c1, sub_c2, sub_c3, sub_c4 = st.columns([1, 1, 1.5, 1.5])
+        
+        # 1. [수정] 전체 선택 버튼 (데이터 + 시각적 체크박스 모두 True로)
         with sub_c1:
             if st.button("✅ 전체 선택", key="select_all_btn", use_container_width=True):
-                # 현재 필터링된 항목들의 인덱스를 찾아 원본 데이터프레임 업데이트
                 for idx in filtered_df.index:
+                    # 데이터 업데이트
                     st.session_state.search_results.loc[idx, 'selected'] = True
-                    # 카드 뷰 체크박스 키값도 함께 업데이트
+                    # 시각적 체크박스(Key) 업데이트 (이게 있어야 화면도 바뀜!)
                     st.session_state[f"card_chk_{idx}"] = True
                 st.rerun()
+
+        # 2. [수정] 전체 해제 버튼 (데이터 + 시각적 체크박스 모두 False로)
         with sub_c2:
             if st.button("❌ 전체 해제", key="deselect_all_btn", use_container_width=True):
                 for idx in filtered_df.index:
+                    # 데이터 업데이트
                     st.session_state.search_results.loc[idx, 'selected'] = False
-                    # 카드 뷰 체크박스 키값도 함께 업데이트
+                    # 시각적 체크박스(Key) 업데이트 (이게 핵심!)
                     st.session_state[f"card_chk_{idx}"] = False
                 st.rerun()
+                
         with sub_c3:
             # 현재 선택 상태 표시
             selected_count = len(st.session_state.search_results[st.session_state.search_results['selected']])
             filtered_count = len(filtered_df)
             st.caption(f"선택: **{selected_count}**개 / 표시: {filtered_count}개")
+            
         with sub_c4:
             # [수정] 리스트 모드가 아닐 때만(카드 모드 등) CSV 다운로드 버튼 표시
             if view_mode != "리스트":
@@ -750,6 +757,8 @@ if not st.session_state.search_results.empty:
         # 주의: 필터링된 DF를 편집하면 원본에 반영해야 함.
         edited_df = st.data_editor(
             filtered_df,
+            # ✅ [추가] 고유한 이름표(key)를 달아줘서 상태가 초기화되는 것을 막습니다.
+            key="list_view_editor",
             # ✅ [추가] 컬럼 순서 적용
             column_order=display_columns,
             column_config={
@@ -834,10 +843,15 @@ if not st.session_state.search_results.empty:
                     # 스크립트 버튼의 가로 사이즈를 확보하기 위해 비율 조절 (1단 텍스트 유지를 위해)
                     c1, c2, c3 = st.columns([0.6, 2.0, 1.4])
                     with c1:
+                        # 1. 키가 세션에 없으면 초기값 설정 (충돌 방지)
+                        if f"card_chk_{idx}" not in st.session_state:
+                            st.session_state[f"card_chk_{idx}"] = row['selected']
+                        
+                        # 2. checkbox 생성 시 value 파라미터 삭제
                         st.checkbox(
                             "선택", 
-                            value=row['selected'], 
-                            key=f"card_chk_{idx}", # 키는 고유한 idx 사용 유지
+                            # value=row['selected'], ❌ 삭제함 (세션 키가 값을 대신 관리함)
+                            key=f"card_chk_{idx}", 
                             on_change=update_card_selection,
                             args=(idx,),
                             label_visibility="collapsed"
