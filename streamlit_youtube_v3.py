@@ -554,6 +554,13 @@ if not st.session_state.search_results.empty:
                     
                     if c_b2.button("📜 스크립트", key=f"s_{idx}", use_container_width=True):
                         open_script_modal(row['video_id'], row['title'])
+
+                    # 👇 [추가] 스크립트 버튼 아래에 썸네일 다운로드 버튼 추가
+                    # (유튜브 고화질 썸네일 URL 생성: maxresdefault.jpg)
+                    thumb_url = f"https://img.youtube.com/vi/{row['video_id']}/maxresdefault.jpg"
+                    c_b2.link_button("🖼️ 썸네일", thumb_url, use_container_width=True, help="클릭하여 고화질 썸네일 확인 및 저장") 
                     
                     if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
                         open_comment_modal(row['video_id'], row['title'], u_key)
+
+                       
