@@ -310,6 +310,10 @@ def open_comment_modal(video_id, title, key):
     c1, c2 = st.columns([2,1])
     limit = "500개" if usage_mgr.is_pro() else "150개"
     c1.write(f"수집: {len(comments)}개 (최대 {limit})")
+
+    # 👇 [추가] 해명 문구 삽입 (여기에 코드를 추가하세요)
+    c1.caption("💡 유튜브 정책상 '스팸/검토대기/삭제' 댓글은 수집되지 않아 표시된 숫자와 다를 수 있습니다.")
+
     c2.download_button("💾 저장", txt.getvalue(), f"comments_{video_id}.txt", use_container_width=True)
     st.divider()
     for c in comments[:30]:
