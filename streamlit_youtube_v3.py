@@ -506,26 +506,29 @@ if not st.session_state.search_results.empty:
 
     # === [리스트 뷰] ===
     if view == "리스트":
-        # 1. [설정] 사용자가 선택 가능한 옵션 정의 (표시 이름 맵핑은 column_config에서 처리)
+        # 1. [설정] 사용자가 선택 가능한 옵션 정의
         optional_cols = [
             "view_count", "subscriber_count", "comment_count", 
             "published_at", "performance", "duration_sec", 
             "view_sub_ratio", "view_diff"
         ]
         
-        # 2. [상태] 세션에 저장된 설정이 없으면 기본값 지정
-        if "my_cols" not in st.session_state:
-            st.session_state.my_cols = [
+        # 2. [상태] 세션에 위젯 상태를 저장할 키("list_view_cols")가 없으면 기본값으로 초기화
+        # 이렇게 해야 다른 동작(정렬, 필터 등)을 수행해 리런(Rerun)되어도 선택값이 날아가지 않습니다.
+        if "list_view_cols" not in st.session_state:
+            st.session_state.list_view_cols = [
                 "view_count", "subscriber_count", "comment_count", 
                 "published_at", "performance"
-            ] # 기본적으로 보여줄 항목들
+            ]
 
-        # 3. [UI] 컬럼 선택 기능 (Expander로 깔끔하게 숨김)
+        # 3. [UI] 컬럼 선택 기능 (Expander)
+        # key="list_view_cols"를 지정했으므로, 선택 결과는 자동으로 st.session_state.list_view_cols에 저장됩니다.
         with st.expander("⚙️ 리스트 표시 항목 설정 (클릭하여 추가/삭제)", expanded=False):
-            st.session_state.my_cols = st.multiselect(
+            current_selection = st.multiselect(
                 "보고 싶은 항목을 선택하세요:",
                 options=optional_cols,
-                default=st.session_state.my_cols,
+                default=st.session_state.list_view_cols, # 초기값 (키가 없을 때만 사용됨)
+                key="list_view_cols",                    # 👈 핵심: 상태 유지를 위한 고유 키
                 format_func=lambda x: {
                     "view_count": "조회수", "subscriber_count": "구독자수", 
                     "comment_count": "댓글수", "published_at": "발행시간", 
@@ -535,13 +538,15 @@ if not st.session_state.search_results.empty:
             )
 
         # 4. [적용] 고정 컬럼 + 사용자 선택 컬럼 합치기
+        # current_selection 변수에는 방금 사용자가 선택한 리스트가 들어있습니다.
         fixed_cols = ["selected", "thumbnail", "url", "title"]
-        final_col_order = fixed_cols + st.session_state.my_cols
+        final_col_order = fixed_cols + current_selection
 
         # 5. [표시] 데이터 에디터
         st.data_editor(
-            df, key="list_view_editor",
-            column_order=final_col_order, # 👈 동적으로 생성된 순서 적용
+            df, 
+            key="list_view_editor",
+            column_order=final_col_order, 
             column_config={
                 "selected": st.column_config.CheckboxColumn("선택", width="small"),
                 "thumbnail": st.column_config.ImageColumn("썸네일", help="클릭하여 확대"),
@@ -560,7 +565,10 @@ if not st.session_state.search_results.empty:
             },
             # 수정 방지 (사용자가 선택한 모든 옵션 컬럼 포함)
             disabled=["url", "title"] + optional_cols,
-            hide_index=True, use_container_width=True, height=600, on_change=save_editor_changes
+            hide_index=True, 
+            use_container_width=True, 
+            height=600, 
+            on_change=save_editor_changes
         )
 
 # === [카드 뷰] ===
