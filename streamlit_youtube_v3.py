@@ -506,28 +506,60 @@ if not st.session_state.search_results.empty:
 
     # === [리스트 뷰] ===
     if view == "리스트":
+        # 1. [설정] 사용자가 선택 가능한 옵션 정의 (표시 이름 맵핑은 column_config에서 처리)
+        optional_cols = [
+            "view_count", "subscriber_count", "comment_count", 
+            "published_at", "performance", "duration_sec", 
+            "view_sub_ratio", "view_diff"
+        ]
+        
+        # 2. [상태] 세션에 저장된 설정이 없으면 기본값 지정
+        if "my_cols" not in st.session_state:
+            st.session_state.my_cols = [
+                "view_count", "subscriber_count", "comment_count", 
+                "published_at", "performance"
+            ] # 기본적으로 보여줄 항목들
+
+        # 3. [UI] 컬럼 선택 기능 (Expander로 깔끔하게 숨김)
+        with st.expander("⚙️ 리스트 표시 항목 설정 (클릭하여 추가/삭제)", expanded=False):
+            st.session_state.my_cols = st.multiselect(
+                "보고 싶은 항목을 선택하세요:",
+                options=optional_cols,
+                default=st.session_state.my_cols,
+                format_func=lambda x: {
+                    "view_count": "조회수", "subscriber_count": "구독자수", 
+                    "comment_count": "댓글수", "published_at": "발행시간", 
+                    "performance": "성과지표", "duration_sec": "영상길이",
+                    "view_sub_ratio": "조회/구독 비율", "view_diff": "조회수 차이"
+                }.get(x, x)
+            )
+
+        # 4. [적용] 고정 컬럼 + 사용자 선택 컬럼 합치기
+        fixed_cols = ["selected", "thumbnail", "url", "title"]
+        final_col_order = fixed_cols + st.session_state.my_cols
+
+        # 5. [표시] 데이터 에디터
         st.data_editor(
             df, key="list_view_editor",
-            # 1. column_order에 "thumbnail" 추가
-            column_order=["selected", "thumbnail", "url", "title", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
+            column_order=final_col_order, # 👈 동적으로 생성된 순서 적용
             column_config={
                 "selected": st.column_config.CheckboxColumn("선택", width="small"),
-                
-                # 2. thumbnail 설정 추가 (이미지 컬럼) 
-                "thumbnail": st.column_config.ImageColumn(
-                    "썸네일", help="클릭하여 확대"
-                ),
-
+                "thumbnail": st.column_config.ImageColumn("썸네일", help="클릭하여 확대"),
                 "url": st.column_config.LinkColumn("URL", max_chars=40, width="small"),
                 "title": st.column_config.TextColumn("제목", width="large"),
+                
+                # --- 선택 가능한 항목들 설정 ---
                 "view_count": st.column_config.NumberColumn("조회수", format="%d"),
                 "subscriber_count": st.column_config.NumberColumn("구독자수", format="%d"),
                 "comment_count": st.column_config.NumberColumn("댓글수", format="%d"),
                 "published_at": st.column_config.TextColumn("발행시간"),
                 "performance": st.column_config.TextColumn("성과지표"),
+                "duration_sec": st.column_config.NumberColumn("길이(초)", format="%d초"),
+                "view_sub_ratio": st.column_config.NumberColumn("조회/구독비", format="%.2f"),
+                "view_diff": st.column_config.NumberColumn("평균대비 차이", format="%d")
             },
-            # disabled 목록에는 thumbnail을 굳이 넣지 않아도 되지만, 수정 방지를 위해 포함 가능합니다.
-            disabled=["url", "title", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
+            # 수정 방지 (사용자가 선택한 모든 옵션 컬럼 포함)
+            disabled=["url", "title"] + optional_cols,
             hide_index=True, use_container_width=True, height=600, on_change=save_editor_changes
         )
 
