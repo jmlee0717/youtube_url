@@ -527,40 +527,62 @@ if not st.session_state.search_results.empty:
             hide_index=True, use_container_width=True, height=600, on_change=save_editor_changes
         )
 
-    # === [카드 뷰] ===
+# === [카드 뷰] ===
     else:
-        cols = st.columns(4)
-        for i, (idx, row) in enumerate(df.iterrows()):
-            with cols[i % 4]:
-                with st.container(border=True, height=520):
-                    st.image(row['thumbnail'], use_container_width=True)
-                    st.markdown(f"**[{row['title']}]({row['url']})**", unsafe_allow_html=True)
-                    st.caption(f"{row['channel']}")
-                    
-                    # 통계 및 성과
-                    c_stat1, c_stat2 = st.columns(2)
-                    c_stat1.caption(f"👁️ {row['view_count']:,}")
-                    c_stat2.caption(f"💬 {row['comment_count']:,}")
-                    
-                    st.caption(f"Ratio: {row['view_sub_ratio']:.4f} | Diff: {row['view_diff']:,.0f}")
-                    if row['performance'] != "- ": st.markdown(f"🚀 **{row['performance']}**")
-                    else: st.write("") # 줄맞춤용
+        # [수정] 4개씩 끊어서 로우(Row) 단위로 렌더링하여 줄맞춤 강제
+        # 이렇게 하면 윗줄 카드의 높이가 달라도 다음 줄은 항상 수평이 맞습니다.
+        for i in range(0, len(df), 4):
+            # 4개씩 데이터 슬라이싱
+            batch = df.iloc[i : i+4]
+            cols = st.columns(4) # 매 줄마다 새로운 컬럼 생성
+            
+            for j, (idx, row) in enumerate(batch.iterrows()):
+                with cols[j]:
+                    # 버튼이 추가되었으므로 카드 높이를 520 -> 580 정도로 늘려주세요
+                    with st.container(border=True, height=580):
+                        # 1. 썸네일
+                        st.image(row['thumbnail'], use_container_width=True)
+                        
+                        # 2. 제목
+                        st.markdown(f"**[{row['title']}]({row['url']})**", unsafe_allow_html=True)
+                        
+                        # 3. 채널명
+                        st.caption(f"{row['channel']}")
+                        
+                        # 4. 통계 정보
+                        c_stat1, c_stat2 = st.columns(2)
+                        c_stat1.caption(f"👁️ {row['view_count']:,}")
+                        c_stat2.caption(f"💬 {row['comment_count']:,}")
+                        
+                        st.caption(f"Ratio: {row['view_sub_ratio']:.4f} | Diff: {row['view_diff']:,.0f}")
+                        
+                        # 5. 성과 지표
+                        if row['performance'] != "- ": 
+                            st.markdown(f"🚀 **{row['performance']}**")
+                        else: 
+                            st.write("") # 줄맞춤용 공백
 
-                    # 하단 버튼 (체크박스, 스크립트, 댓글)
-                    c_b1, c_b2, c_b3 = st.columns([0.6, 2, 1.4])
-                    if f"chk_{idx}" not in st.session_state: st.session_state[f"chk_{idx}"] = row['selected']
-                    
-                    c_b1.checkbox("선택", key=f"chk_{idx}", on_change=update_sel, args=(df.at[idx, "_original_index"],), label_visibility="collapsed")
-                    
-                    if c_b2.button("📜 스크립트", key=f"s_{idx}", use_container_width=True):
-                        open_script_modal(row['video_id'], row['title'])
-
-                    # 👇 [추가] 스크립트 버튼 아래에 썸네일 다운로드 버튼 추가
-                    # (유튜브 고화질 썸네일 URL 생성: maxresdefault.jpg)
-                    thumb_url = f"https://img.youtube.com/vi/{row['video_id']}/maxresdefault.jpg"
-                    c_b2.link_button("🖼️ 썸네일", thumb_url, use_container_width=True, help="클릭하여 고화질 썸네일 확인 및 저장") 
-                    
-                    if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
-                        open_comment_modal(row['video_id'], row['title'], u_key)
+                        # 6. 하단 버튼 그룹 (체크박스 | 스크립트 | 썸네일/댓글)
+                        # 공간 확보를 위해 ratio 조정
+                        c_b1, c_b2, c_b3 = st.columns([0.6, 2, 1.4])
+                        
+                        # (1) 선택 체크박스
+                        if f"chk_{idx}" not in st.session_state: 
+                            st.session_state[f"chk_{idx}"] = row['selected']
+                        
+                        c_b1.checkbox("선택", key=f"chk_{idx}", on_change=update_sel, args=(df.at[idx, "_original_index"],), label_visibility="collapsed")
+                        
+                        # (2) 스크립트 & 썸네일 버튼 (가운데 컬럼에 세로로 배치)
+                        with c_b2:
+                            if st.button("📜 스크립트", key=f"s_{idx}", use_container_width=True):
+                                open_script_modal(row['video_id'], row['title'])
+                            
+                            # [추가됨] 썸네일 다운로드 버튼
+                            thumb_url = f"https://img.youtube.com/vi/{row['video_id']}/maxresdefault.jpg"
+                            st.link_button("🖼️ 썸네일", thumb_url, use_container_width=True, help="고화질 썸네일 보기")
+                        
+                        # (3) 댓글 버튼
+                        if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
+                            open_comment_modal(row['video_id'], row['title'], u_key)
 
                        
