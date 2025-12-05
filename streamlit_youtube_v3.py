@@ -504,9 +504,16 @@ if not st.session_state.search_results.empty:
     if view == "리스트":
         st.data_editor(
             df, key="list_view_editor",
-            column_order=["selected", "url", "title", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
+            # 1. column_order에 "thumbnail" 추가
+            column_order=["selected", "thumbnail", "url", "title", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
             column_config={
                 "selected": st.column_config.CheckboxColumn("선택", width="small"),
+                
+                # 2. thumbnail 설정 추가 (이미지 컬럼) 
+                "thumbnail": st.column_config.ImageColumn(
+                    "썸네일", help="클릭하여 확대"
+                ),
+
                 "url": st.column_config.LinkColumn("URL", max_chars=40, width="small"),
                 "title": st.column_config.TextColumn("제목", width="large"),
                 "view_count": st.column_config.NumberColumn("조회수", format="%d"),
@@ -515,6 +522,7 @@ if not st.session_state.search_results.empty:
                 "published_at": st.column_config.TextColumn("발행시간"),
                 "performance": st.column_config.TextColumn("성과지표"),
             },
+            # disabled 목록에는 thumbnail을 굳이 넣지 않아도 되지만, 수정 방지를 위해 포함 가능합니다.
             disabled=["url", "title", "view_count", "subscriber_count", "comment_count", "published_at", "performance"],
             hide_index=True, use_container_width=True, height=600, on_change=save_editor_changes
         )
