@@ -25,11 +25,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Secrets에서 접두어 가져오기 (기본값: donjjul)
-SECRET_PREFIX = st.secrets.get("SUB_PREFIX", "donjjul")
-
-# 이번 달 정답 생성 (예: donjjul12)
-CURRENT_MONTH_PW = f"{SECRET_PREFIX}{datetime.now().strftime('%m')}"
+# 이번 달 암호
+CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
 
 # === [2] 상태 관리 및 속도 제한 ===
 STATE_FILE = 'app_state.pkl'
@@ -398,11 +395,27 @@ with st.sidebar:
         st.caption("구독자 비밀번호")
         pw_input = st.text_input("Password", type="password", label_visibility="collapsed", key="pw_sub")
         
+        # [수정된 코드] 비밀번호 확인 및 안내 메시지 (링크 동적 변경 적용)
         if pw_input == CURRENT_MONTH_PW:
             st.session_state.is_subscriber = True
             st.success("🎉 인증 성공! 무제한 모드 ON")
+            st.balloons() 
+            
         elif pw_input:
-            st.error("비밀번호가 틀렸습니다.")
+            st.error("⛔ 암호가 변경되었거나 틀렸습니다!")
+            
+            # 1. Secrets에서 등록된 URL을 가져옵니다. 
+            # (만약 등록 안 되어 있으면 기본값으로 기존 채널 주소 사용)
+            target_url = st.secrets.get("CHANNEL_URL", "https://www.youtube.com/@월천알고리즘")
+            
+            # 2. 가져온 URL(target_url)을 링크에 적용
+            st.markdown(f"""
+            **[안내]** 혹시 **지난달 암호**를 입력하셨나요? 😅
+            
+            매달 1일, 쾌적한 서버 환경을 위해 암호가 변경됩니다.
+            지금 바로 **[돈쭐파파 채널 바로가기]({target_url})**에서
+            **'최신 영상'**이나 **'커뮤니티'**를 확인해주세요!
+            """)
             st.session_state.is_subscriber = False
             
     # 상태 표시 파란 박스
