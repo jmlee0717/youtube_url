@@ -30,19 +30,30 @@ st.set_page_config(
 # [최종 완결판] JavaScript로 DOM 요소 직접 제거
 hide_streamlit_elements = """
     <style>
-    /* CSS 기본 숨김 */
+    /* 1. 헤더/푸터 숨김 */
     header {visibility: hidden !important; height: 0px !important;}
     footer {visibility: hidden !important; display: none !important;}
+    
+    /* 2. 툴바 숨김 */
     [data-testid="stToolbar"],
     [data-testid="stStatusWidget"],
-    [data-testid="stDecoration"],
-    button[title*="ullscreen"],
-    button[kind*="header"],
+    .stAppDeployButton,
     .viewerBadge_container__1QSob,
     div[class*="viewerBadge"],
     a[href*="streamlit.io"] {
         display: none !important;
-        visibility: hidden !important;
+    }
+    
+    /* 3. Fullscreen 버튼 클릭 비활성화 */
+    button[title*="ullscreen"],
+    button[title*="Fullscreen"],
+    button[kind="header"],
+    button[kind="headerNoPadding"],
+    [data-testid="StyledFullScreenButton"],
+    [data-testid="stBaseButton-header"] {
+        pointer-events: none !important;
+        opacity: 0.3 !important;
+        cursor: not-allowed !important;
     }
     </style>
     
