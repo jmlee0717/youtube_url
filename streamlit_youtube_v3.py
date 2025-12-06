@@ -27,44 +27,48 @@ st.set_page_config(
 )
 
 
-# [클릭 원천 봉쇄 및 시각적 차단]
+# [클릭 원천 봉쇄 및 시각적 차단 - 최종 강력 버전]
 hide_and_block_clicks = """
     <style>
-    /* 1. 기존 숨김 로직 (최대한 숨김 시도) */
-    header, footer, [data-testid="stToolbar"], .stAppDeployButton {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    /* 2. ★ 핵심: 하단 영역 클릭 무력화 (Click Killer) ★ */
-    /* 하단 50px 영역의 모든 클릭 이벤트를 무시하게 만듭니다 */
-    footer {
-        pointer-events: none !important; 
-        opacity: 0 !important;
-    }
-    
-    div[class*="viewerBadge"] {
-        pointer-events: none !important;
-        opacity: 0 !important;
-    }
+    /* 1. 상단 헤더, 햄버거 메뉴, 데코레이션 바 삭제 */
+    header[data-testid="stHeader"] { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    [data-testid="stDecoration"] { display: none !important; }
 
-    /* 3. ★ 최후의 수단: 하단 화이트 마스킹 (White Mask) ★ */
-    /* 화면 맨 아래에 강제로 흰색 박스를 덧대어 가려버립니다. */
+    /* 2. 하단 푸터 삭제 */
+    footer { display: none !important; }
+
+    /* 3. ★ 핵심: 우측 하단 빨간 버튼(Hosted with Streamlit) 제거 ★ */
+    /* 클래스 이름이 바뀌어도 'streamlit.io'로 가는 링크는 무조건 숨김 */
+    a[href*="streamlit.io/cloud"] { display: none !important; }
+    div[class*="viewerBadge"] { display: none !important; }
+    
+    /* 4. 프로필 사진(Status Widget) 제거 */
+    [data-testid="stStatusWidget"] { display: none !important; }
+    
+    /* 5. 배포 버튼(Deploy) 제거 */
+    .stAppDeployButton { display: none !important; }
+    
+    /* 6. 임베드 모드에서 나오는 'View fullscreen' 버튼 제거 */
+    button[title="View fullscreen"] { display: none !important; }
+    
+    /* 7. 최후의 수단: 화면 최하단 50px 영역 자체를 투명 장막으로 덮어버림 */
+    /* 혹시라도 위 코드가 안 먹힐 경우를 대비한 물리적 클릭 차단 */
     div[data-testid="stAppViewContainer"]::after {
         content: "";
         position: fixed;
-        left: 0;
         bottom: 0;
+        right: 0;
         width: 100%;
-        height: 60px; /* 하단 바 높이만큼 가림 */
-        background-color: white; /* 배경색과 동일하게 설정 (다크모드면 black) */
-        z-index: 999999; /* 가장 위에 덮어씀 */
-        pointer-events: none; /* 이 박스도 클릭 안 되게 */
+        height: 50px; /* 하단 바 높이 */
+        background: transparent; /* 투명하게 */
+        pointer-events: auto; /* 클릭 이벤트를 여기서 가로챔 */
+        z-index: 999999; /* 최상단 레이어 */
+        cursor: default; /* 마우스 커서도 기본으로 고정 */
     }
     </style>
     """
 st.markdown(hide_and_block_clicks, unsafe_allow_html=True)
-
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
 
