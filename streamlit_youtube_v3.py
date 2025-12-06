@@ -27,73 +27,70 @@ st.set_page_config(
 )
 
 
-# [최종] Fullscreen 버튼 완전 제거 CSS
-hide_all_elements = """
+# [최종 완결판] JavaScript로 DOM 요소 직접 제거
+hide_streamlit_elements = """
     <style>
-    /* 1. 최상단 헤더 숨기기 */
-    header {
-        visibility: hidden !important;
-        height: 0px !important;
-    }
-    
-    /* 2. 하단 푸터 완전 삭제 */
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
-    }
-    
-    /* 3. 툴바 삭제 */
-    [data-testid="stToolbar"] {
-        display: none !important;
-    }
-    [data-testid="stStatusWidget"] {
-        display: none !important;
-    }
-    
-    /* 4. 배포 버튼 삭제 */
-    .stAppDeployButton {
-        display: none !important;
-    }
-    
-    /* 5. Fullscreen 버튼 완전 제거 (최강 버전) */
-    button[title="Fullscreen"],
-    button[title="View fullscreen"],
-    button[kind="header"],
-    button[kind="headerNoPadding"],
-    [data-testid="StyledFullScreenButton"],
-    [data-testid="stFullScreenButton"],
-    div[data-testid="stDecoration"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-    }
-    
-    /* 6. Viewer Badge 및 하단 링크 제거 */
+    /* CSS 기본 숨김 */
+    header {visibility: hidden !important; height: 0px !important;}
+    footer {visibility: hidden !important; display: none !important;}
+    [data-testid="stToolbar"],
+    [data-testid="stStatusWidget"],
+    [data-testid="stDecoration"],
+    button[title*="ullscreen"],
+    button[kind*="header"],
     .viewerBadge_container__1QSob,
-    .styles_viewerBadge__1yB5_,
-    .viewerBadge_link__1S137,
     div[class*="viewerBadge"],
-    div[class*="ViewerBadge"],
     a[href*="streamlit.io"] {
         display: none !important;
-    }
-    
-    /* 7. 최종 보험: 우측 하단 모든 요소 숨김 */
-    .main > div:nth-last-child(1),
-    .main > div:nth-last-child(2),
-    iframe ~ div {
-        display: none !important;
-    }
-    
-    /* 8. Streamlit Community Cloud 전용 숨김 */
-    [data-testid="stBaseButton-header"] {
-        display: none !important;
+        visibility: hidden !important;
     }
     </style>
+    
+    <script>
+    // JavaScript로 Fullscreen 버튼 완전 제거
+    function removeFullscreenButton() {
+        // 1. Fullscreen 버튼 찾아서 제거
+        const fullscreenButtons = document.querySelectorAll(
+            'button[title*="ullscreen"], button[title*="Fullscreen"], ' +
+            'button[kind="header"], button[kind="headerNoPadding"], ' +
+            '[data-testid="StyledFullScreenButton"], ' +
+            '[data-testid="stFullScreenButton"], ' +
+            '[data-testid="stBaseButton-header"]'
+        );
+        fullscreenButtons.forEach(btn => btn.remove());
+        
+        // 2. Viewer Badge 제거
+        const badges = document.querySelectorAll(
+            'div[class*="viewerBadge"], div[class*="ViewerBadge"], ' +
+            '.viewerBadge_container__1QSob, a[href*="streamlit.io"]'
+        );
+        badges.forEach(badge => badge.remove());
+        
+        // 3. Decoration 제거
+        const decorations = document.querySelectorAll('[data-testid="stDecoration"]');
+        decorations.forEach(deco => deco.remove());
+        
+        // 4. 툴바 제거
+        const toolbars = document.querySelectorAll('[data-testid="stToolbar"]');
+        toolbars.forEach(toolbar => toolbar.remove());
+    }
+    
+    // 페이지 로드 시 실행
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeFullscreenButton);
+    } else {
+        removeFullscreenButton();
+    }
+    
+    // 주기적으로 확인 (동적 생성 대응)
+    setInterval(removeFullscreenButton, 500);
+    
+    // MutationObserver로 DOM 변경 감지
+    const observer = new MutationObserver(removeFullscreenButton);
+    observer.observe(document.body, {childList: true, subtree: true});
+    </script>
     """
-st.markdown(hide_all_elements, unsafe_allow_html=True)
+st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
 
 
 # ↓↓↓ 수정 후 ↓↓↓
