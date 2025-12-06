@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 
-# [최종판] Fullscreen 클릭 이벤트 강제 차단
+# [최종판] "Built with Streamlit" 링크 클릭 차단
 hide_elements = """
     <style>
     /* 1. 헤더/푸터 숨김 */
@@ -37,80 +37,38 @@ hide_elements = """
     /* 2. 툴바 숨김 */
     [data-testid="stToolbar"],
     [data-testid="stStatusWidget"],
-    .stAppDeployButton,
-    .viewerBadge_container__1QSob,
-    div[class*="viewerBadge"],
-    a[href*="streamlit.io"] {
+    .stAppDeployButton {
         display: none !important;
     }
     
-    /* 3. Fullscreen 버튼 스타일 */
+    /* 3. "Built with Streamlit" 링크 완전 차단 */
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .styles_viewerBadge__1yB5_,
+    div[class*="viewerBadge"],
+    div[class*="ViewerBadge"],
+    a[href*="streamlit.io"],
+    a[target="_blank"][href*="community.cloud"],
+    footer a,
+    footer div {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+    }
+    
+    /* 4. Fullscreen 버튼도 차단 */
     button[title*="ullscreen"],
-    button[title*="Fullscreen"],
-    button[kind="header"],
-    button[kind="headerNoPadding"],
-    [data-testid="StyledFullScreenButton"],
-    [data-testid="stBaseButton-header"] {
+    button[kind="header"] {
         pointer-events: none !important;
         opacity: 0.3 !important;
-        cursor: not-allowed !important;
+    }
+    
+    /* 5. 강력한 추가 차단 - 모든 외부 링크 */
+    a[target="_blank"] {
+        pointer-events: none !important;
     }
     </style>
-    
-    <script>
-    // JavaScript로 Fullscreen 클릭 이벤트 완전 차단
-    function blockFullscreen() {
-        const selectors = [
-            'button[title*="ullscreen"]',
-            'button[title*="Fullscreen"]', 
-            'button[kind="header"]',
-            'button[kind="headerNoPadding"]',
-            '[data-testid="StyledFullScreenButton"]',
-            '[data-testid="stBaseButton-header"]'
-        ];
-        
-        selectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(button => {
-                // 모든 클릭 이벤트 차단
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    return false;
-                }, true);
-                
-                // 마우스 이벤트도 차단
-                button.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }, true);
-                
-                // 터치 이벤트 차단
-                button.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }, true);
-                
-                // 스타일 강제 적용
-                button.style.pointerEvents = 'none';
-                button.style.opacity = '0.3';
-                button.style.cursor = 'not-allowed';
-            });
-        });
-    }
-    
-    // 즉시 실행
-    blockFullscreen();
-    
-    // 0.5초마다 재실행 (동적 생성 대응)
-    setInterval(blockFullscreen, 500);
-    
-    // DOM 변경 감지
-    const observer = new MutationObserver(blockFullscreen);
-    observer.observe(document.body, {childList: true, subtree: true});
-    </script>
     """
 st.markdown(hide_elements, unsafe_allow_html=True)
 
