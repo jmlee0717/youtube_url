@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 
-# [최종판] "Built with Streamlit" 링크 클릭 차단
+# [최종판] embed 모드 리다이렉트 완전 차단
 hide_elements = """
     <style>
     /* 1. 헤더/푸터 숨김 */
@@ -41,36 +41,70 @@ hide_elements = """
         display: none !important;
     }
     
-    /* 3. "Built with Streamlit" 링크 완전 차단 */
+    /* 3. "Built with Streamlit" 링크 차단 */
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
-    .styles_viewerBadge__1yB5_,
     div[class*="viewerBadge"],
-    div[class*="ViewerBadge"],
     a[href*="streamlit.io"],
-    a[target="_blank"][href*="community.cloud"],
-    footer a,
-    footer div {
+    footer a {
+        display: none !important;
+        pointer-events: none !important;
+    }
+    
+    /* 4. Fullscreen/embed 리다이렉트 버튼 완전 제거 */
+    button[title*="ullscreen"],
+    button[kind="header"],
+    a[href*="utm_medium=oembed"],
+    a[href*="?embed"],
+    [data-testid="StyledFullScreenButton"] {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
         opacity: 0 !important;
     }
-    
-    /* 4. Fullscreen 버튼도 차단 */
-    button[title*="ullscreen"],
-    button[kind="header"] {
-        pointer-events: none !important;
-        opacity: 0.3 !important;
-    }
-    
-    /* 5. 강력한 추가 차단 - 모든 외부 링크 */
-    a[target="_blank"] {
-        pointer-events: none !important;
-    }
     </style>
+    
+    <script>
+    // JavaScript로 embed 리다이렉트 링크 제거
+    function blockEmbedRedirect() {
+        // 1. utm_medium=oembed 링크 제거
+        document.querySelectorAll('a[href*="utm_medium=oembed"]').forEach(link => {
+            link.remove();
+        });
+        
+        // 2. Fullscreen 버튼 제거
+        document.querySelectorAll('button[title*="ullscreen"], button[kind="header"]').forEach(btn => {
+            btn.remove();
+        });
+        
+        // 3. 모든 a 태그에서 utm_medium 링크 차단
+        document.querySelectorAll('a').forEach(link => {
+            if (link.href && link.href.includes('utm_medium=oembed')) {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return false;
+                }, true);
+                link.style.pointerEvents = 'none';
+                link.remove();
+            }
+        });
+    }
+    
+    // 즉시 실행
+    blockEmbedRedirect();
+    
+    // 0.3초마다 재실행
+    setInterval(blockEmbedRedirect, 300);
+    
+    // DOM 변경 감지
+    const observer = new MutationObserver(blockEmbedRedirect);
+    observer.observe(document.body, {childList: true, subtree: true});
+    </script>
     """
 st.markdown(hide_elements, unsafe_allow_html=True)
+
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
