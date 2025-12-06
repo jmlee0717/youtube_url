@@ -523,30 +523,43 @@ if not st.session_state.search_results.empty:
                 st.session_state[f"chk_{i}"]=False
             st.rerun()
 
-    # 4. CSV 다운로드 (우측 끝) - 리스트 뷰에서는 숨김 처리
+    # 4. CSV 다운로드 (우측 끝)
     with c_top[3]:
-        # 1. 현재 세션의 결과 중 'selected'가 True(체크됨)인 행만 가져옵니다.
-        sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
+        # 1. 체크된 항목만 가져오기
+        sel_rows = st.session_state.search_results[st.session_state.search_results['selected']].copy()
         sel_count = len(sel_rows)
         
         st.caption(f"선택: {sel_count}개")
         
         if usage_mgr.is_pro():
-            # 선택된 영상이 1개 이상일 때만 로직 수행
             if sel_count > 0:
-                export_df = sel_rows.copy()
+                # 👇👇 [핵심 추가] 화면에 보이는 '정렬 옵션'을 그대로 적용 👇👇
+                if "조회수" in sort_opt: 
+                    sel_rows = sel_rows.sort_values('view_count', ascending=False)
+                elif "조회구독비율" in sort_opt: 
+                    sel_rows = sel_rows.sort_values('view_sub_ratio', ascending=False)
+                elif "성과" in sort_opt: 
+                    sel_rows = sel_rows.sort_values('performance', ascending=False) # 문자열 정렬이라 완벽하진 않지만 근사치 제공
+                elif "평균대비차이" in sort_opt: 
+                    sel_rows = sel_rows.sort_values('view_diff', ascending=False)
+                elif "영상길이" in sort_opt: 
+                    sel_rows = sel_rows.sort_values('duration_sec', ascending=False)
+                else: 
+                    sel_rows = sel_rows.sort_values('published_at', ascending=False) # 기본값
+                # 👆👆 ---------------------------------------------------- 👆👆
+
+                export_df = sel_rows
                 
-                # [안전 장치] 저장 직전 한글 자소 분리(NFC) 재확인
+                # 한글 자소 분리 방지 (NFC 정규화)
                 for col in ['title', 'channel']: 
                     if col in export_df.columns:
                         export_df[col] = export_df[col].apply(
                             lambda x: unicodedata.normalize('NFC', str(x)) if isinstance(x, str) else x
                         )
 
-                # 필요한 컬럼만 뽑아서 CSV 변환
-                csv = export_df[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
+                # CSV 변환 (사용자가 보기 편한 컬럼 순서로 배치)
+                csv = export_df[['title', 'url', 'view_count', 'published_at', 'view_sub_ratio']].to_csv(index=False).encode('utf-8-sig')
                 
-                # 다운로드 버튼 활성화
                 st.download_button(
                     label="📥 CSV 다운로드", 
                     data=csv, 
@@ -555,11 +568,9 @@ if not st.session_state.search_results.empty:
                     use_container_width=True
                 )
             else:
-                # 선택된 게 0개면 버튼 비활성화
-                st.button("📥 CSV 다운로드", disabled=True, use_container_width=True, help="리스트의 '선택' 체크박스를 먼저 눌러주세요.")
+                st.button("📥 CSV 다운로드", disabled=True, use_container_width=True, help="리스트에서 영상을 먼저 선택해주세요.")
         else:
-            st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="구독자 인증 후 사용 가능합니다.")
-
+            st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="구독자 전용 기능입니다.")
 # === [리스트 뷰 옵션 설정] ===
     # 1. [설정] 전체 옵션 컬럼 정의
     optional_cols = [
