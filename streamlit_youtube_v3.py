@@ -26,36 +26,45 @@ st.set_page_config(
     layout="wide"
 )
 
-# [최종] 툴바 및 빨간 버튼 강제 삭제 CSS
-hide_st_style = """
+# [핵심] 모든 요소를 강력하게 숨기는 CSS
+hide_all_elements = """
     <style>
-    /* 1. 상단 헤더 숨기기 */
-    header {visibility: hidden;}
+    /* 1. 최상단 헤더(Header) 숨기기 */
+    header {
+        visibility: hidden !important;
+        height: 0px !important;
+    }
     
-    /* 2. 햄버거 메뉴 숨기기 */
-    #MainMenu {visibility: hidden;}
-    
-    /* 3. 푸터 숨기기 */
-    footer {visibility: hidden;}
-    
-    /* 4. ★ 핵심: 우측 하단 빨간 버튼(Deploy) 및 툴바 완전 제거 ★ */
-    .stAppDeployButton {
+    /* 2. 하단 푸터(Footer) 통째로 삭제 */
+    /* 이 부분이 'Fullscreen' 버튼과 '빨간 왕관'을 없앱니다 */
+    footer {
         visibility: hidden !important;
         display: none !important;
+        height: 0px !important;
     }
+    
+    /* 3. 우측 하단 툴바 및 프로필 위젯 삭제 */
     [data-testid="stToolbar"] {
         visibility: hidden !important;
         display: none !important;
     }
-    
-    /* 5. 혹시 모를 프로필 사진 위젯 숨기기 */
     [data-testid="stStatusWidget"] {
         visibility: hidden !important;
         display: none !important;
     }
+    
+    /* 4. 혹시 모를 배포 버튼 삭제 */
+    .stAppDeployButton {
+        display: none !important;
+    }
+    
+    /* 5. 임베드 모드에서 생기는 하단 바 찌꺼기 제거 */
+    .viewerBadge_container__1QSob {
+        display: none !important;
+    }
     </style>
     """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+st.markdown(hide_all_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
