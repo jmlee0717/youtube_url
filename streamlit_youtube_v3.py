@@ -19,36 +19,52 @@ import time
 import random
 import unicodedata  # <--- 이 줄을 추가하세요 (한글 자소 합치기용)
 
+# 페이지 기본 설정 (가장 윗줄에 있어야 함)
+st.set_page_config(layout="wide", page_title="유튜브 떡상 채굴기") 
+
+# [강력한 CSS 스타일 주입]
+hide_floating_elements = """
+    <style>
+    /* 1. 상단 헤더바(햄버거 메뉴 포함) 전체 숨기기 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* 2. 하단 푸터(Made with Streamlit) 숨기기 */
+    footer {
+        display: none !important;
+    }
+
+    /* 3. ★ 핵심: 우측 하단 툴바 (빨간 버튼 + 프로필 사진) 완전 제거 ★ */
+    [data-testid="stToolbar"] {
+        visibility: hidden !important;
+        display: none !important;
+        height: 0px !important;
+    }
+    
+    /* 4. 프로필 사진이 들어있는 상태 위젯 숨기기 */
+    [data-testid="stStatusWidget"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 5. 우측 하단에 고정된 모든 버튼류 강제 숨김 (추가 안전장치) */
+    .stDeployButton {display:none !important;}
+    div[role="button"] {
+        /* 주의: 이 옵션은 화면의 모든 버튼을 건드릴 수 있으므로 
+           우측 하단 플로팅 버튼의 특정 클래스가 바뀌었을 때를 대비한 
+           최후의 수단입니다. 보통 3번에서 해결됩니다. */
+    }
+    </style>
+    """
+st.markdown(hide_floating_elements, unsafe_allow_html=True)
+
 # === [1] 기본 설정 및 시크릿 로드 ===
 st.set_page_config(
     page_title="유튜브 떡상 채굴기 v0.1(베타)",
     page_icon="⛏️",
     layout="wide"
 )
-
-# [강력한 CSS 스타일 주입]
-hide_elements = """
-    <style>
-    /* 1. 상단 햄버거 메뉴(점 3개) 숨기기 */
-    #MainMenu {visibility: hidden;}
-    
-    /* 2. 하단 'Made with Streamlit' 푸터 숨기기 */
-    footer {visibility: hidden;}
-    
-    /* 3. 상단 헤더 장식 줄 숨기기 (깔끔하게 보이기 위함) */
-    header {visibility: hidden;}
-    
-    /* 4. ★ 핵심: 우측 하단 프로필, 배포 버튼, 뷰어 뱃지 등 모두 숨기기 ★ */
-    .stDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
-    [data-testid="stDecoration"] {visibility: hidden !important;}
-    [data-testid="stStatusWidget"] {visibility: hidden !important;}
-    
-    /* 혹시 모를 뷰어 뱃지 컨테이너 숨김 */
-    .viewerBadge_container__1QSob {display: none;}
-    </style>
-    """
-st.markdown(hide_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
