@@ -482,6 +482,9 @@ if st.session_state.get('trigger', False):
     if res:
         st.session_state.search_results = pd.DataFrame(res)
         save_state({'search_results':st.session_state.search_results})
+        # [추가된 부분] 검색 성공 시 메시지와 함께 풍선 날리기 🎈
+        st.toast(f"🎉 채굴 성공! {len(res)}개의 영상을 찾았습니다.", icon="⛏️")
+        st.snow("✅ 채굴 성공!")        
     else: st.warning("결과가 없습니다.")
 
 # 결과 화면
