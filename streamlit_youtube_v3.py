@@ -558,7 +558,7 @@ if not st.session_state.search_results.empty:
                         )
 
                 # CSV 변환 (사용자가 보기 편한 컬럼 순서로 배치)
-                csv = export_df[['title', 'url', 'view_count', 'published_at', 'view_sub_ratio']].to_csv(index=False).encode('utf-8-sig')
+                csv = export_df[['thumbnail','title', 'url', 'view_count', 'published_at', 'view_sub_ratio', 'performance', 'duration_sec', 'view_diff', 'subscriber_count', 'comment_count', 'is_shorts', 'channel', 'video_id']].to_csv(index=False).encode('utf-8-sig')
                 
                 st.download_button(
                     label="📥 CSV 다운로드", 
