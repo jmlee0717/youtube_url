@@ -27,6 +27,8 @@ st.set_page_config(
 )
 
 # [최종 완결] 모든 툴바, 푸터, 뷰어 배지 강력 삭제
+# === [수정 전 - 29번 줄] ===
+# [핵심] 모든 요소를 강력하게 숨기는 CSS
 hide_all_elements = """
     <style>
     /* 1. 최상단 헤더(Header) 숨기기 */
@@ -36,9 +38,11 @@ hide_all_elements = """
     }
     
     /* 2. 하단 푸터(Footer) 통째로 삭제 */
+    /* 이 부분이 'Fullscreen' 버튼과 '빨간 왕관'을 없앱니다 */
     footer {
         visibility: hidden !important;
         display: none !important;
+        height: 0px !important;
     }
     
     /* 3. 우측 하단 툴바 및 프로필 위젯 삭제 */
@@ -46,15 +50,83 @@ hide_all_elements = """
         visibility: hidden !important;
         display: none !important;
     }
-    
-    /* 4. ★ 핵심: Fullscreen 버튼과 빨간 로고(뷰어 배지) 삭제 ★ */
-    /* 클래스 이름이 viewerBadge로 시작하거나 포함된 모든 요소를 찾아서 삭제합니다 */
-    div[class*="viewerBadge_container"] {
+    [data-testid="stStatusWidget"] {
+        visibility: hidden !important;
         display: none !important;
     }
     
-    /* 혹시 모를 내부 링크(a 태그)까지 삭제 */
-    a[class*="viewerBadge"] {
+    /* 4. 혹시 모를 배포 버튼 삭제 */
+    .stAppDeployButton {
+        display: none !important;
+    }
+    
+    /* 5. 임베드 모드에서 생기는 하단 바 찌꺼기 제거 */
+    .viewerBadge_container__1QSob {
+        display: none !important;
+    }
+    </style>
+    """
+
+
+# ↓↓↓ 수정 후 ↓↓↓
+
+# [핵심] 모든 요소를 강력하게 숨기는 CSS
+hide_all_elements = """
+    <style>
+    /* 1. 최상단 헤더(Header) 숨기기 */
+    header {
+        visibility: hidden !important;
+        height: 0px !important;
+    }
+    
+    /* 2. 하단 푸터(Footer) 통째로 삭제 */
+    /* 이 부분이 'Fullscreen' 버튼과 '빨간 왕관'을 없앱니다 */
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+        height: 0px !important;
+    }
+    
+    /* 3. 우측 하단 툴바 및 프로필 위젯 삭제 */
+    [data-testid="stToolbar"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    [data-testid="stStatusWidget"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    
+    /* 4. 혹시 모를 배포 버튼 삭제 */
+    .stAppDeployButton {
+        display: none !important;
+    }
+    
+    /* 5. 임베드 모드에서 생기는 하단 바 찌꺼기 제거 */
+    .viewerBadge_container__1QSob {
+        display: none !important;
+    }
+    
+    /* 6. Fullscreen 버튼 강제 숨김 (추가) */
+    button[title="Fullscreen"],
+    button[title="fullscreen"],
+    button[kind="header"],
+    [data-testid="StyledFullScreenButton"],
+    .styles_viewerBadge__1yB5_,
+    .viewerBadge_link__1S137,
+    .viewerBadge_container__1QSob,
+    div[data-testid="stDecoration"],
+    .main > div:last-child,
+    iframe ~ div[data-testid="stToolbar"] {
+        visibility: hidden !important;
+        display: none !important;
+        opacity: 0 !important;
+    }
+    
+    /* 7. 추가 보험: 우측 하단 모든 버튼 숨김 */
+    div[class*="viewerBadge"],
+    div[class*="ViewerBadge"],
+    a[href*="streamlit.io"] {
         display: none !important;
     }
     </style>
