@@ -19,22 +19,36 @@ import time
 import random
 import unicodedata  # <--- 이 줄을 추가하세요 (한글 자소 합치기용)
 
-# [CSS 스타일 주입]
-hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            .stDeployButton {display:none;}
-            </style>
-            """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 # === [1] 기본 설정 및 시크릿 로드 ===
 st.set_page_config(
     page_title="유튜브 떡상 채굴기 v0.1(베타)",
     page_icon="⛏️",
     layout="wide"
 )
+
+# [강력한 CSS 스타일 주입]
+hide_elements = """
+    <style>
+    /* 1. 상단 햄버거 메뉴(점 3개) 숨기기 */
+    #MainMenu {visibility: hidden;}
+    
+    /* 2. 하단 'Made with Streamlit' 푸터 숨기기 */
+    footer {visibility: hidden;}
+    
+    /* 3. 상단 헤더 장식 줄 숨기기 (깔끔하게 보이기 위함) */
+    header {visibility: hidden;}
+    
+    /* 4. ★ 핵심: 우측 하단 프로필, 배포 버튼, 뷰어 뱃지 등 모두 숨기기 ★ */
+    .stDeployButton {display:none;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stDecoration"] {visibility: hidden !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important;}
+    
+    /* 혹시 모를 뷰어 뱃지 컨테이너 숨김 */
+    .viewerBadge_container__1QSob {display: none;}
+    </style>
+    """
+st.markdown(hide_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
