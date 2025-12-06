@@ -397,9 +397,14 @@ with st.sidebar:
         
         # [수정된 코드] 비밀번호 확인 및 안내 메시지 (링크 동적 변경 적용)
         if pw_input == CURRENT_MONTH_PW:
+            # 이미 인증된 상태가 아니라면 (이번에 처음 맞췄다면)
+            if not st.session_state.get("is_subscriber", False):
+                st.session_state.is_subscriber = True
+                st.toast("🎉 인증 성공! 무제한 모드 ON") # 가볍게 토스트 메시지로 변경
+                st.balloons()
+
             st.session_state.is_subscriber = True
-            st.success("🎉 인증 성공! 무제한 모드 ON")
-            st.balloons() 
+            st.success("✅ 인증됨 (무제한 모드 사용 중)")
             
         elif pw_input:
             st.error("⛔ 암호가 변경되었거나 틀렸습니다!")
