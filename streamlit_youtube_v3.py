@@ -27,48 +27,43 @@ st.set_page_config(
 )
 
 
-# [클릭 원천 봉쇄 및 시각적 차단 - 최종 강력 버전]
+# [최종 수정: 화이트아웃 & 클릭 차단]
 hide_and_block_clicks = """
     <style>
-    /* 1. 상단 헤더, 햄버거 메뉴, 데코레이션 바 삭제 */
-    header[data-testid="stHeader"] { display: none !important; }
-    [data-testid="stToolbar"] { display: none !important; }
-    [data-testid="stDecoration"] { display: none !important; }
+    /* 1. 모든 메뉴바, 푸터, 헤더 숨김 처리 */
+    header, footer, .stAppDeployButton, [data-testid="stToolbar"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
 
-    /* 2. 하단 푸터 삭제 */
-    footer { display: none !important; }
-
-    /* 3. ★ 핵심: 우측 하단 빨간 버튼(Hosted with Streamlit) 제거 ★ */
-    /* 클래스 이름이 바뀌어도 'streamlit.io'로 가는 링크는 무조건 숨김 */
-    a[href*="streamlit.io/cloud"] { display: none !important; }
+    /* 2. 스트림릿 로고, 뷰어 배지 강력 삭제 */
     div[class*="viewerBadge"] { display: none !important; }
+    a[href*="streamlit"] { display: none !important; }
     
-    /* 4. 프로필 사진(Status Widget) 제거 */
-    [data-testid="stStatusWidget"] { display: none !important; }
-    
-    /* 5. 배포 버튼(Deploy) 제거 */
-    .stAppDeployButton { display: none !important; }
-    
-    /* 6. 임베드 모드에서 나오는 'View fullscreen' 버튼 제거 */
-    button[title="View fullscreen"] { display: none !important; }
-    
-    /* 7. 최후의 수단: 화면 최하단 50px 영역 자체를 투명 장막으로 덮어버림 */
-    /* 혹시라도 위 코드가 안 먹힐 경우를 대비한 물리적 클릭 차단 */
+    /* 3. ★ 핵심: 물리적 클릭 차단 장벽 (Whiteout Barrier) ★ */
+    /* 화면 맨 아래에 '클릭 불가능한 흰색 박스'를 강제로 고정시킵니다. */
+    /* z-index를 21억(최대치)으로 설정하여 그 어떤 버튼보다 위에 오게 합니다. */
     div[data-testid="stAppViewContainer"]::after {
         content: "";
         position: fixed;
+        left: 0;
         bottom: 0;
-        right: 0;
         width: 100%;
-        height: 50px; /* 하단 바 높이 */
-        background: transparent; /* 투명하게 */
-        pointer-events: auto; /* 클릭 이벤트를 여기서 가로챔 */
-        z-index: 999999; /* 최상단 레이어 */
-        cursor: default; /* 마우스 커서도 기본으로 고정 */
+        height: 60px;  /* 하단 바를 충분히 가릴 높이 */
+        background-color: white; /* 배경색과 일치시킴 (다크모드면 black으로 변경) */
+        z-index: 2147483647; /* CSS 허용 최대값: 무조건 최상단 위치 */
+        pointer-events: auto; /* 마우스 클릭을 이 박스가 다 받아먹음 (클릭 차단) */
+    }
+    
+    /* 4. 혹시 모를 모바일 브라우저용 추가 차단 */
+    iframe[title="streamlit-footer"] {
+        display: none !important;
     }
     </style>
     """
 st.markdown(hide_and_block_clicks, unsafe_allow_html=True)
+
+
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
 
