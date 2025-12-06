@@ -27,136 +27,37 @@ st.set_page_config(
 )
 
 
-# [최종 완결판] JavaScript로 DOM 요소 직접 제거
-hide_streamlit_elements = """
+# [간단 버전] Fullscreen 클릭만 비활성화
+hide_elements = """
     <style>
-    /* CSS 기본 숨김 */
+    /* 1. 헤더/푸터 숨김 */
     header {visibility: hidden !important; height: 0px !important;}
     footer {visibility: hidden !important; display: none !important;}
+    
+    /* 2. 툴바 숨김 */
     [data-testid="stToolbar"],
     [data-testid="stStatusWidget"],
-    [data-testid="stDecoration"],
+    .stAppDeployButton,
+    .viewerBadge_container__1QSob,
+    div[class*="viewerBadge"],
+    a[href*="streamlit.io"] {
+        display: none !important;
+    }
+    
+    /* 3. Fullscreen 버튼 클릭 비활성화 */
     button[title*="ullscreen"],
-    button[kind*="header"],
-    .viewerBadge_container__1QSob,
-    div[class*="viewerBadge"],
-    a[href*="streamlit.io"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    </style>
-    
-    <script>
-    // JavaScript로 Fullscreen 버튼 완전 제거
-    function removeFullscreenButton() {
-        // 1. Fullscreen 버튼 찾아서 제거
-        const fullscreenButtons = document.querySelectorAll(
-            'button[title*="ullscreen"], button[title*="Fullscreen"], ' +
-            'button[kind="header"], button[kind="headerNoPadding"], ' +
-            '[data-testid="StyledFullScreenButton"], ' +
-            '[data-testid="stFullScreenButton"], ' +
-            '[data-testid="stBaseButton-header"]'
-        );
-        fullscreenButtons.forEach(btn => btn.remove());
-        
-        // 2. Viewer Badge 제거
-        const badges = document.querySelectorAll(
-            'div[class*="viewerBadge"], div[class*="ViewerBadge"], ' +
-            '.viewerBadge_container__1QSob, a[href*="streamlit.io"]'
-        );
-        badges.forEach(badge => badge.remove());
-        
-        // 3. Decoration 제거
-        const decorations = document.querySelectorAll('[data-testid="stDecoration"]');
-        decorations.forEach(deco => deco.remove());
-        
-        // 4. 툴바 제거
-        const toolbars = document.querySelectorAll('[data-testid="stToolbar"]');
-        toolbars.forEach(toolbar => toolbar.remove());
-    }
-    
-    // 페이지 로드 시 실행
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', removeFullscreenButton);
-    } else {
-        removeFullscreenButton();
-    }
-    
-    // 주기적으로 확인 (동적 생성 대응)
-    setInterval(removeFullscreenButton, 500);
-    
-    // MutationObserver로 DOM 변경 감지
-    const observer = new MutationObserver(removeFullscreenButton);
-    observer.observe(document.body, {childList: true, subtree: true});
-    </script>
-    """
-st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
-
-
-# ↓↓↓ 수정 후 ↓↓↓
-
-# [핵심] 모든 요소를 강력하게 숨기는 CSS
-hide_all_elements = """
-    <style>
-    /* 1. 최상단 헤더(Header) 숨기기 */
-    header {
-        visibility: hidden !important;
-        height: 0px !important;
-    }
-    
-    /* 2. 하단 푸터(Footer) 통째로 삭제 */
-    /* 이 부분이 'Fullscreen' 버튼과 '빨간 왕관'을 없앱니다 */
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
-    }
-    
-    /* 3. 우측 하단 툴바 및 프로필 위젯 삭제 */
-    [data-testid="stToolbar"] {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    [data-testid="stStatusWidget"] {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    /* 4. 혹시 모를 배포 버튼 삭제 */
-    .stAppDeployButton {
-        display: none !important;
-    }
-    
-    /* 5. 임베드 모드에서 생기는 하단 바 찌꺼기 제거 */
-    .viewerBadge_container__1QSob {
-        display: none !important;
-    }
-    
-    /* 6. Fullscreen 버튼 강제 숨김 (추가) */
-    button[title="Fullscreen"],
-    button[title="fullscreen"],
+    button[title*="Fullscreen"],
     button[kind="header"],
+    button[kind="headerNoPadding"],
     [data-testid="StyledFullScreenButton"],
-    .styles_viewerBadge__1yB5_,
-    .viewerBadge_link__1S137,
-    .viewerBadge_container__1QSob,
-    div[data-testid="stDecoration"],
-    .main > div:last-child,
-    iframe ~ div[data-testid="stToolbar"] {
-        visibility: hidden !important;
-        display: none !important;
-        opacity: 0 !important;
-    }
-    
-    /* 7. 추가 보험: 우측 하단 모든 버튼 숨김 */
-    div[class*="viewerBadge"],
-    div[class*="ViewerBadge"],
-    a[href*="streamlit.io"] {
-        display: none !important;
+    [data-testid="stBaseButton-header"] {
+        pointer-events: none !important;
+        opacity: 0.3 !important;
+        cursor: not-allowed !important;
     }
     </style>
     """
-st.markdown(hide_all_elements, unsafe_allow_html=True)
+st.markdown(hide_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
