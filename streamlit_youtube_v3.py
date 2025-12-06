@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 
-# [최종판] embed 모드 리다이렉트 완전 차단
+# [최종판] 프로필 아이콘 및 메뉴 완전 차단
 hide_elements = """
     <style>
     /* 1. 헤더/푸터 숨김 */
@@ -51,59 +51,95 @@ hide_elements = """
         pointer-events: none !important;
     }
     
-    /* 4. Fullscreen/embed 리다이렉트 버튼 완전 제거 */
-    button[title*="ullscreen"],
+    /* 4. 프로필 아이콘/메뉴 완전 차단 (핵심!) */
+    [data-testid="stHeaderActionElements"],
     button[kind="header"],
-    a[href*="utm_medium=oembed"],
-    a[href*="?embed"],
-    [data-testid="StyledFullScreenButton"] {
+    button[kind="headerNoPadding"],
+    header button,
+    header div[data-testid],
+    div[data-baseweb="popover"],
+    [class*="UserMenu"],
+    [class*="userMenu"],
+    button[aria-label*="user"],
+    button[aria-label*="User"],
+    button[aria-label*="profile"],
+    button[aria-label*="Profile"],
+    button[aria-label*="account"],
+    button[aria-label*="Account"] {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
         opacity: 0 !important;
     }
+    
+    /* 5. Fullscreen 버튼도 차단 */
+    button[title*="ullscreen"],
+    a[href*="utm_medium=oembed"] {
+        display: none !important;
+        pointer-events: none !important;
+    }
+    
+    /* 6. 우측 상단 모든 버튼 차단 (강력 보험) */
+    header > div > div:last-child,
+    header > div > div:nth-last-child(1),
+    header > div > div:nth-last-child(2) {
+        display: none !important;
+    }
     </style>
     
     <script>
-    // JavaScript로 embed 리다이렉트 링크 제거
-    function blockEmbedRedirect() {
-        // 1. utm_medium=oembed 링크 제거
-        document.querySelectorAll('a[href*="utm_medium=oembed"]').forEach(link => {
-            link.remove();
+    // JavaScript로 프로필 관련 요소 완전 제거
+    function removeProfileElements() {
+        // 1. 프로필 아이콘/메뉴 제거
+        const profileSelectors = [
+            '[data-testid="stHeaderActionElements"]',
+            'button[kind="header"]',
+            'button[kind="headerNoPadding"]',
+            'header button',
+            '[class*="UserMenu"]',
+            '[class*="userMenu"]',
+            'button[aria-label*="user"]',
+            'button[aria-label*="profile"]',
+            'button[aria-label*="account"]'
+        ];
+        
+        profileSelectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.remove();
+            });
         });
         
-        // 2. Fullscreen 버튼 제거
-        document.querySelectorAll('button[title*="ullscreen"], button[kind="header"]').forEach(btn => {
-            btn.remove();
+        // 2. Popover 메뉴 제거
+        document.querySelectorAll('div[data-baseweb="popover"]').forEach(el => {
+            el.remove();
         });
         
-        // 3. 모든 a 태그에서 utm_medium 링크 차단
-        document.querySelectorAll('a').forEach(link => {
-            if (link.href && link.href.includes('utm_medium=oembed')) {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    return false;
-                }, true);
-                link.style.pointerEvents = 'none';
-                link.remove();
+        // 3. Fullscreen/embed 링크 제거
+        document.querySelectorAll('a[href*="utm_medium=oembed"], button[title*="ullscreen"]').forEach(el => {
+            el.remove();
+        });
+        
+        // 4. header의 우측 div들 제거
+        document.querySelectorAll('header > div > div:last-child').forEach(el => {
+            if (el.querySelector('button')) {
+                el.remove();
             }
         });
     }
     
     // 즉시 실행
-    blockEmbedRedirect();
+    removeProfileElements();
     
     // 0.3초마다 재실행
-    setInterval(blockEmbedRedirect, 300);
+    setInterval(removeProfileElements, 300);
     
     // DOM 변경 감지
-    const observer = new MutationObserver(blockEmbedRedirect);
+    const observer = new MutationObserver(removeProfileElements);
     observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """
 st.markdown(hide_elements, unsafe_allow_html=True)
+
 
 
 # 이번 달 암호
