@@ -290,12 +290,15 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before, _duration
                     'video_id': vid, 'selected': False,
                     'thumbnail': sn.get('thumbnails',{}).get('medium',{}).get('url',''),
                     'url': f"https://youtube.com/watch?v={vid}",
-                    'title': sn.get('title',''), 'channel': sn.get('channelTitle',''),
+                    # 👇👇 [핵심 수정] 가져올 때부터 'NFC'로 강력 접착! 👇👇
+                    'title': unicodedata.normalize('NFC', sn.get('title','')), 
+                    'channel': unicodedata.normalize('NFC', sn.get('channelTitle','')),
+                    # 👆👆 ------------------------------------------- 👆👆
                     'view_count': vc, 'subscriber_count': sub, 'comment_count': int(stt.get('commentCount',0)),
                     'published_at': convert_to_kst(sn.get('publishedAt','')),
                     'view_sub_ratio': vc/sub if sub>0 else 0, 'view_diff': vc-avg,
                     'performance': perf, 'duration_sec': duration_sec, 'is_shorts': is_shorts
-                })
+                })  
             
             pb.progress(min(len(results)/target, 1.0)); token = res.get('nextPageToken')
             if not token: break
