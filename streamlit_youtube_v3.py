@@ -359,90 +359,45 @@ st.markdown("""
 *"맨땅에 헤딩하지 마세요. 떡상 영상은 **채굴**하는 것입니다."*
 """)
 
-# --- Sidebar UI (이미지와 동일하게 구성) ---
+# --- Sidebar UI ---
 with st.sidebar:
     st.header("🔑 기본 설정")
-    #st.caption("API Key 입력 (필수)")
-    #u_key = st.text_input("API Key", type="password", label_visibility="collapsed").strip()
-
-    # 👇👇 [아래 코드로 교체하세요] 👇👇
     
-    st.caption("API Key 입력 (필수)")
-    
-    # 1. URL(주소창)에 저장된 키가 있는지 확인
-    # (새로고침 해도 URL에 남아있는 정보를 가져옵니다)
+    # 1. API Key 관리
     query_params = st.query_params
     saved_key = query_params.get("api_key", "")
-    
-    # 2. 입력창 생성 (저장된 키를 기본값으로 채워넣음)
     u_key = st.text_input("API Key", value=saved_key, type="password", label_visibility="collapsed", key="api_key_input").strip()
     
-    # 3. 입력값이 바뀌면 URL 업데이트 (새로고침 대비 저장)
     if u_key != saved_key:
         st.query_params["api_key"] = u_key
 
-
-    # 👇👇 [여기부터 추가하세요] 👇👇
-    # ---------------------------------------------------------
-    # API 연결 확인 기능 (Expander)
-    # ---------------------------------------------------------
-    if u_key: # 키가 입력되었을 때만 표시
+    # API 연결 확인
+    if u_key:
         with st.expander("🛠️ API 연결 확인"):
             if st.button("접속 테스트 실행", use_container_width=True):
-                # run_api_test 함수 호출 (코드 상단에 정의됨)
                 results = run_api_test(u_key)
                 for icon, msg in results:
-                    if icon == "✅":
-                        st.success(f"{icon} {msg}")
-                    else:
-                        st.error(f"{icon} {msg}")
-    # ---------------------------------------------------------
-    # 👆👆 [여기까지 추가] 👆👆    
+                    if icon == "✅": st.success(f"{icon} {msg}")
+                    else: st.error(f"{icon} {msg}")
     
     st.divider()
     
+    # 2. 구독자 인증
     st.header("🎁 구독자 혜택")
-    
-    # Expander: 구독자 인증
     with st.expander("🔐 모든 기능 무료로 풀기!", expanded=not usage_mgr.is_pro()):
-        st.markdown(f"""
-        **돈쭐파파 구독자**라면 제한 없이 사용하세요!
-        
-        비밀번호는 [제 유튜브 채널](https://www.youtube.com/@%EC%9B%94%EC%B2%9C%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98)의 최신 영상 더보기란에 있습니다.
-        """)
-        
         st.caption("구독자 비밀번호")
-        pw_input = st.text_input("Password", value=saved_key, type="password", label_visibility="collapsed", key="pw_sub")
+        pw_input = st.text_input("Password", value="", type="password", label_visibility="collapsed", key="pw_sub")
         
-        # [수정된 코드] 비밀번호 확인 및 안내 메시지 (링크 동적 변경 적용)
         if pw_input == CURRENT_MONTH_PW:
-            # 이미 인증된 상태가 아니라면 (이번에 처음 맞췄다면)
             if not st.session_state.get("is_subscriber", False):
                 st.session_state.is_subscriber = True
-                st.toast("🎉 인증 성공! 무제한 모드 ON") # 가볍게 토스트 메시지로 변경
+                st.toast("🎉 인증 성공! 무제한 모드 ON")
                 st.balloons()
-
-            st.session_state.is_subscriber = True
-            st.success("✅ 인증됨 (무제한 모드 사용 중)")
-            
+            st.success("✅ 인증됨 (무제한 모드)")
         elif pw_input:
-            st.error("⛔ 암호가 변경되었거나 틀렸습니다!")
-            
-            # 1. Secrets에서 등록된 URL을 가져옵니다. 
-            # (만약 등록 안 되어 있으면 기본값으로 기존 채널 주소 사용)
-            target_url = st.secrets.get("CHANNEL_URL", "https://www.youtube.com/@월천알고리즘")
-            
-            # 2. 가져온 URL(target_url)을 링크에 적용
-            st.markdown(f"""
-            **[안내]** 혹시 **지난달 암호**를 입력하셨나요? 😅
-            
-            매달 1일, 쾌적한 서버 환경을 위해 암호가 변경됩니다.
-            지금 바로 [돈쭐파파 채널 바로가기]({target_url})에서
-            '최신 영상'이나 '커뮤니티'를 확인해주세요!
-            """)
+            st.error("⛔ 암호가 틀렸습니다!")
             st.session_state.is_subscriber = False
-            
-    # 상태 표시 파란 박스
+
     if usage_mgr.is_pro():
         st.info("💎 현재 **구독자(무제한)** 모드입니다.")
     else:
@@ -451,14 +406,15 @@ with st.sidebar:
 
     st.divider()
     
-    # 검색 조건
+    # 3. 검색 조건 (여기가 중요합니다!)
     st.header("검색 조건")
     st.caption("키워드")
-    kw = st.text_input("키워드", value="쇼츠 수익", label_visibility="collapsed")
+    kw = st.text_input("키워드", value="60대 후회 사연", label_visibility="collapsed") # 추천 키워드 기본값 적용
     
     limit_cnt = 50 if usage_mgr.is_pro() else 30
     st.caption(f"최대 검색 결과: {limit_cnt}개")
     
+    # [날짜 계산 로직 복구]
     st.caption("기간")
     prd = st.selectbox("기간", ["전체","최근 7일","최근 30일","사용자 지정"], label_visibility="collapsed")
     
@@ -470,40 +426,24 @@ with st.sidebar:
     elif prd=="최근 30일": 
         p_after=(datetime.now()-timedelta(30)).strftime("%Y-%m-%dT00:00:00Z")
     elif prd=="사용자 지정":
-        col_date1, col_date2 = st.columns(2)
-        with col_date1:
-            start_date = st.date_input("시작일", value=datetime.now()-timedelta(30), max_value=datetime.now())
-        with col_date2:
-            end_date = st.date_input("종료일", value=datetime.now(), max_value=datetime.now())
-        
-        if start_date and end_date:
-            if start_date > end_date:
-                st.error("⚠️ 시작일이 종료일보다 늦을 수 없습니다!")
-            else:
-                p_after = start_date.strftime("%Y-%m-%dT00:00:00Z")
-                p_before = end_date.strftime("%Y-%m-%dT23:59:59Z")
+        c_d1, c_d2 = st.columns(2)
+        with c_d1: s_d = st.date_input("시작일", value=datetime.now()-timedelta(30))
+        with c_d2: e_d = st.date_input("종료일", value=datetime.now())
+        if s_d and e_d:
+            p_after = s_d.strftime("%Y-%m-%dT00:00:00Z")
+            p_before = e_d.strftime("%Y-%m-%dT23:59:59Z")
 
-    st.caption("영상 길이")
-    # 유튜브 API 기준: short(<4분), medium(4~20분), long(>20분)
-    # 사용자가 이해하기 쉽게 한글로 라벨링
+    # [영상 길이 필터 (3분 기준)]
+    st.caption("영상 길이 필터")
     dur_option = st.radio(
         "영상 길이 선택", 
-        ["전체", "숏폼 (3분 이하)", "중장폼 (3분~20분)", "장편 (20분 이상)"],
-        index=0,
+        ["전체", "숏폼 (3분 이하)", "롱폼 (3분 초과)"],
+        index=2, # 기본값을 롱폼으로 설정 (시연 편의상)
         horizontal=True,
         label_visibility="collapsed"
     )
 
-    # 선택된 옵션을 API 파라미터로 매핑
-    dur_map = {
-        "전체": None,
-        "숏폼 (3분 이하)": "short",
-        "중장폼 (3분~20분)": "medium",
-        "장편 (20분 이상)": "long"
-    }
-    selected_dur_param = dur_map[dur_option]
-    
-    st.write("") # 간격
+    st.write("") 
     if st.button("🔍 검색 시작", type="primary", use_container_width=True):
         if not u_key: st.toast("API Key를 입력해주세요!", icon="🚨")
         elif not usage_mgr.can_search(): st.error("🔒 일일 검색 한도 초과!"); st.info("구독자 비밀번호를 입력하세요!")
@@ -513,23 +453,16 @@ with st.sidebar:
             st.session_state.scripts_map = {}
             usage_mgr.increment_search()
 
-# --- Main Content ---
+# --- Main Content (함수 호출부) ---
 if st.session_state.get('trigger', False):
     st.session_state.trigger = False
-    limit_cnt = 50 if usage_mgr.is_pro() else 30
     
-    # [수정됨] search_youtube 함수 호출 시 selected_dur_param 전달
-    # (주의: 사이드바 변수인 selected_dur_param을 가져와야 함)
+    # 검색 함수 호출 (수정된 인자 전달)
+    res = search_youtube(u_key, kw, limit_cnt, p_after, p_before, dur_option)
     
-    # 사이드바 위젯 값은 리런(Rerun) 시 유지되므로 바로 사용 가능
-    # 하지만 안전하게 기본값 처리를 위해 아래와 같이 호출 권장
-    duration_arg = locals().get('selected_dur_param', None) 
-    
-    res = search_youtube(u_key, kw, limit_count, p_after, None, duration_arg)
     if res:
         st.session_state.search_results = pd.DataFrame(res)
         save_state({'search_results':st.session_state.search_results})
-        # [추가된 부분] 검색 성공 시 메시지와 함께 풍선 날리기 🎈
         st.toast(f"🎉 채굴 성공! {len(res)}개의 영상을 찾았습니다.", icon="⛏️")
         st.balloons()        
     else: st.warning("결과가 없습니다.")
