@@ -27,34 +27,53 @@ st.set_page_config(
 )
 
 
-# [최후의 수단: 물리적 차단막 생성]
-# 단순 CSS가 아니라, 화면 맨 위에 '실제 흰색 상자'를 얹어버리는 HTML 코드를 주입합니다.
-block_footer_html = """
-<div style="
-    position: fixed;
-    bottom: 0px;
-    left: 0px;
-    width: 100%;
-    height: 60px;
-    background-color: #ffffff; /* 흰색 배경 (다크모드라면 #0e1117 사용) */
-    z-index: 9999999; /* 그 어떤 요소보다 위에 위치 */
-    pointer-events: auto; /* 마우스 클릭을 이 상자가 다 받아냄 (클릭 차단) */
-"></div>
-
-<style>
-    /* 상단 헤더 숨기기 */
-    header[data-testid="stHeader"] { display: none !important; }
+# [최종 방어: 저작권 바로 덮어쓰기 (Physical Cover)]
+hide_footer_style = """
+    <style>
+    /* 1. 기본 메뉴 및 헤더 숨기기 */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    /* 기존 툴바 및 푸터 숨기기 시도 */
-    footer { display: none !important; }
-    [data-testid="stToolbar"] { display: none !important; }
-    .stAppDeployButton { display: none !important; }
+    /* 2. 링크 자체를 무력화 시도 */
+    a[href^="https://streamlit.io/cloud"] {
+        display: none !important;
+        pointer-events: none;
+    }
     
-    /* 혹시 모를 뷰어 배지 숨기기 */
-    div[class*="viewerBadge"] { display: none !important; }
-</style>
-"""
-st.markdown(block_footer_html, unsafe_allow_html=True)
+    /* 3. ★ 핵심: 하단 저작권 바 생성 (물리적 차단막) ★ */
+    /* 화면 최하단에 흰색 띠를 생성하여 빨간 버튼을 덮어버립니다. */
+    div[data-testid="stAppViewContainer"]::after {
+        content: "Designed by 돈쭐파파 | YouTube 떡상 채굴기"; /* 여기에 표시할 텍스트 입력 */
+        
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 60px; /* 버튼 높이보다 살짝 높게 설정 */
+        
+        background-color: white; /* 배경색 (다크모드 사용 시 black으로 변경) */
+        color: #888888; /* 글자색 */
+        font-size: 13px;
+        font-weight: bold;
+        
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        /* z-index를 CSS 허용 최대값으로 설정하여 무조건 최상단에 위치 */
+        z-index: 2147483647; 
+        pointer-events: auto; /* 클릭을 이 바가 대신 받음 (뒤에 있는 버튼 클릭 불가) */
+        cursor: default;
+    }
+    
+    /* 4. 모바일 등에서 튀어나오는 iframe 숨김 */
+    iframe[title="streamlit-footer"] {
+        display: none !important;
+    }
+    </style>
+    """
+st.markdown(hide_footer_style, unsafe_allow_html=True)
 
 
 # 이번 달 암호
