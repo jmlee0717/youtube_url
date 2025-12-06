@@ -374,6 +374,9 @@ with st.sidebar:
     st.header("🔑 기본 설정")
     
     # 1. API Key 관리
+    st.markdown("""
+    *유튜브 API Key 입력*
+    """)
     query_params = st.query_params
     saved_key = query_params.get("api_key", "")
     u_key = st.text_input("API Key", value=saved_key, type="password", label_visibility="collapsed", key="api_key_input").strip()
