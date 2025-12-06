@@ -27,6 +27,7 @@ st.set_page_config(
 
 # Secrets에서 접두어 가져오기 (기본값: donjjul)
 SECRET_PREFIX = st.secrets.get("SUB_PREFIX", "donjjul")
+
 # 이번 달 정답 생성 (예: donjjul12)
 CURRENT_MONTH_PW = f"{SECRET_PREFIX}{datetime.now().strftime('%m')}"
 
@@ -133,6 +134,9 @@ if 'search_results' not in st.session_state:
         for c in ['view_sub_ratio', 'view_diff', 'duration_sec']:
             if c not in st.session_state.search_results.columns:
                 st.session_state.search_results[c] = 0
+        # is_shorts 컬럼 추가 (기존 데이터 호환, 180초 기준)
+        if 'is_shorts' not in st.session_state.search_results.columns:
+            st.session_state.search_results['is_shorts'] = st.session_state.search_results['duration_sec'] < 180
 
 # === [4] 핵심 기능 함수 (검색, 스크립트, 댓글) ===
 def get_youtube_transcript(video_id):
@@ -254,6 +258,12 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
                     if r >= 200: perf = "🔥🔥 초대박"
                     elif r >= 100: perf = "🔥 떡상"
                     elif r >= 50: perf = "👍 양호"
+                
+                # 쇼츠 판단 로직 (2025년 기준)
+                duration_sec = parse_iso_duration(cnt.get('duration',''))
+                
+                # 쇼츠 조건: 180초 이하
+                is_shorts = duration_sec <= 180
                     
                 results.append({
                     'video_id': vid, 'selected': False,
@@ -263,7 +273,7 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
                     'view_count': vc, 'subscriber_count': sub, 'comment_count': int(stt.get('commentCount',0)),
                     'published_at': convert_to_kst(sn.get('publishedAt','')),
                     'view_sub_ratio': vc/sub if sub>0 else 0, 'view_diff': vc-avg,
-                    'performance': perf, 'duration_sec': parse_iso_duration(cnt.get('duration',''))
+                    'performance': perf, 'duration_sec': duration_sec, 'is_shorts': is_shorts
                 })
             pb.progress(min(len(results)/target, 1.0)); token = res.get('nextPageToken')
             if not token: break
@@ -413,11 +423,28 @@ with st.sidebar:
     st.caption(f"최대 검색 결과: {limit_cnt}개")
     
     st.caption("기간")
-    prd = st.selectbox("기간", ["전체","최근 7일","최근 30일"], label_visibility="collapsed")
+    prd = st.selectbox("기간", ["전체","최근 7일","최근 30일","사용자 지정"], label_visibility="collapsed")
     
     p_after = None
-    if prd=="최근 7일": p_after=(datetime.now()-timedelta(7)).strftime("%Y-%m-%dT00:00:00Z")
-    elif prd=="최근 30일": p_after=(datetime.now()-timedelta(30)).strftime("%Y-%m-%dT00:00:00Z")
+    p_before = None
+    
+    if prd=="최근 7일": 
+        p_after=(datetime.now()-timedelta(7)).strftime("%Y-%m-%dT00:00:00Z")
+    elif prd=="최근 30일": 
+        p_after=(datetime.now()-timedelta(30)).strftime("%Y-%m-%dT00:00:00Z")
+    elif prd=="사용자 지정":
+        col_date1, col_date2 = st.columns(2)
+        with col_date1:
+            start_date = st.date_input("시작일", value=datetime.now()-timedelta(30), max_value=datetime.now())
+        with col_date2:
+            end_date = st.date_input("종료일", value=datetime.now(), max_value=datetime.now())
+        
+        if start_date and end_date:
+            if start_date > end_date:
+                st.error("⚠️ 시작일이 종료일보다 늦을 수 없습니다!")
+            else:
+                p_after = start_date.strftime("%Y-%m-%dT00:00:00Z")
+                p_before = end_date.strftime("%Y-%m-%dT23:59:59Z")
     
     st.write("") # 간격
     if st.button("🔍 검색 시작", type="primary", use_container_width=True):
@@ -458,8 +485,10 @@ if not st.session_state.search_results.empty:
     
     # 데이터 필터링 & 정렬 적용
     df = st.session_state.search_results.copy()
-    if filter_opt == "숏폼": df = df[df['duration_sec'] < 60]
-    elif filter_opt == "롱폼": df = df[df['duration_sec'] >= 60]
+    if filter_opt == "숏폼": 
+        df = df[df['is_shorts'] == True]
+    elif filter_opt == "롱폼": 
+        df = df[df['is_shorts'] == False]
     
     if "조회수" in sort_opt: df = df.sort_values('view_count', ascending=False)
     elif "떡상" in sort_opt: df = df.sort_values('view_sub_ratio', ascending=False)
@@ -504,31 +533,30 @@ if not st.session_state.search_results.empty:
             # 리스트 뷰일 때는 아무것도 표시하지 않음
             st.empty()
 
-    # === [리스트 뷰] ===
-    if view == "리스트":
-        # 1. [설정] 사용자가 선택 가능한 옵션 정의
-        optional_cols = [
+# === [리스트 뷰 옵션 설정] ===
+    # 1. [설정] 전체 옵션 컬럼 정의
+    optional_cols = [
+        "view_count", "subscriber_count", "comment_count", 
+        "published_at", "performance", "duration_sec", 
+        "view_sub_ratio", "view_diff"
+    ]
+    
+    # 2. [초기화] 세션 상태 안전 초기화
+    if "view_options_selected" not in st.session_state:
+        st.session_state.view_options_selected = [
             "view_count", "subscriber_count", "comment_count", 
-            "published_at", "performance", "duration_sec", 
-            "view_sub_ratio", "view_diff"
+            "published_at", "performance"
         ]
-        
-        # 2. [상태] 세션에 위젯 상태를 저장할 키("list_view_cols")가 없으면 기본값으로 초기화
-        # 이렇게 해야 다른 동작(정렬, 필터 등)을 수행해 리런(Rerun)되어도 선택값이 날아가지 않습니다.
-        if "list_view_cols" not in st.session_state:
-            st.session_state.list_view_cols = [
-                "view_count", "subscriber_count", "comment_count", 
-                "published_at", "performance"
-            ]
 
-        # 3. [UI] 컬럼 선택 기능 (Expander)
-        # key="list_view_cols"를 지정했으므로, 선택 결과는 자동으로 st.session_state.list_view_cols에 저장됩니다.
-        with st.expander("⚙️ 리스트 표시 항목 설정 (클릭하여 추가/삭제)", expanded=False):
-            current_selection = st.multiselect(
-                "보고 싶은 항목을 선택하세요:",
+    # 3. [UI] 컬럼 선택 기능 - 리스트 뷰일 때만 표시
+    if view == "리스트":
+        # 오른쪽 여백 확보 (아이콘과 겹치지 않도록)
+        col_multi, col_space = st.columns([0.88, 0.12])
+        with col_multi:
+            selected_cols = st.multiselect(
+                "📊 리스트 표시 항목:",
                 options=optional_cols,
-                default=st.session_state.list_view_cols, # 초기값 (키가 없을 때만 사용됨)
-                key="list_view_cols",                    # 👈 핵심: 상태 유지를 위한 고유 키
+                default=st.session_state.view_options_selected,
                 format_func=lambda x: {
                     "view_count": "조회수", "subscriber_count": "구독자수", 
                     "comment_count": "댓글수", "published_at": "발행시간", 
@@ -536,13 +564,38 @@ if not st.session_state.search_results.empty:
                     "view_sub_ratio": "조회/구독 비율", "view_diff": "조회수 차이"
                 }.get(x, x)
             )
+        
+        # 4. 선택값을 session_state에 저장 (뷰 전환 시에도 유지)
+        st.session_state.view_options_selected = selected_cols
+    else:
+        # 카드 뷰일 때는 저장된 값 사용
+        selected_cols = st.session_state.view_options_selected
 
+# === [리스트 뷰] ===
+    if view == "리스트":
         # 4. [적용] 고정 컬럼 + 사용자 선택 컬럼 합치기
-        # current_selection 변수에는 방금 사용자가 선택한 리스트가 들어있습니다.
         fixed_cols = ["selected", "thumbnail", "url", "title"]
-        final_col_order = fixed_cols + current_selection
+        final_col_order = fixed_cols + selected_cols
 
         # 5. [표시] 데이터 에디터
+
+        # Show/hide columns 아이콘 숨기기
+        st.markdown("""
+            <style>
+            /* Show/hide columns 버튼 숨기기 */
+            [data-testid="stDataFrameToolbarButton"]:first-of-type,
+            button[kind="icon"][title*="column"],
+            button[kind="icon"][title*="Column"],
+            button[aria-label*="column"],
+            button[aria-label*="Column"],
+            div[data-testid="stDataFrameToolbar"] button:first-child {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+
         st.data_editor(
             df, 
             key="list_view_editor",
@@ -553,7 +606,7 @@ if not st.session_state.search_results.empty:
                 "url": st.column_config.LinkColumn("URL", max_chars=40, width="small"),
                 "title": st.column_config.TextColumn("제목", width="large"),
                 
-                # --- 선택 가능한 항목들 설정 ---
+                # --- 동적 컬럼 설정 ---
                 "view_count": st.column_config.NumberColumn("조회수", format="%d"),
                 "subscriber_count": st.column_config.NumberColumn("구독자수", format="%d"),
                 "comment_count": st.column_config.NumberColumn("댓글수", format="%d"),
@@ -563,7 +616,6 @@ if not st.session_state.search_results.empty:
                 "view_sub_ratio": st.column_config.NumberColumn("조회/구독비", format="%.2f"),
                 "view_diff": st.column_config.NumberColumn("평균대비 차이", format="%d")
             },
-            # 수정 방지 (사용자가 선택한 모든 옵션 컬럼 포함)
             disabled=["url", "title"] + optional_cols,
             hide_index=True, 
             use_container_width=True, 
@@ -628,5 +680,3 @@ if not st.session_state.search_results.empty:
                         # (3) 댓글 버튼
                         if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
                             open_comment_modal(row['video_id'], row['title'], u_key)
-
-                       
