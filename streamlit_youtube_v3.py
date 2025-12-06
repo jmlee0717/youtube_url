@@ -27,37 +27,70 @@ st.set_page_config(
 )
 
 
-# [간단 버전] Fullscreen 클릭만 비활성화
-hide_elements = """
+# [최종 완결판] JavaScript로 DOM 요소 직접 제거
+hide_streamlit_elements = """
     <style>
-    /* 1. 헤더/푸터 숨김 */
+    /* CSS 기본 숨김 */
     header {visibility: hidden !important; height: 0px !important;}
     footer {visibility: hidden !important; display: none !important;}
-    
-    /* 2. 툴바 숨김 */
     [data-testid="stToolbar"],
     [data-testid="stStatusWidget"],
-    .stAppDeployButton,
+    [data-testid="stDecoration"],
+    button[title*="ullscreen"],
+    button[kind*="header"],
     .viewerBadge_container__1QSob,
     div[class*="viewerBadge"],
     a[href*="streamlit.io"] {
         display: none !important;
-    }
-    
-    /* 3. Fullscreen 버튼 클릭 비활성화 */
-    button[title*="ullscreen"],
-    button[title*="Fullscreen"],
-    button[kind="header"],
-    button[kind="headerNoPadding"],
-    [data-testid="StyledFullScreenButton"],
-    [data-testid="stBaseButton-header"] {
-        pointer-events: none !important;
-        opacity: 0.3 !important;
-        cursor: not-allowed !important;
+        visibility: hidden !important;
     }
     </style>
+    
+    <script>
+    // JavaScript로 Fullscreen 버튼 완전 제거
+    function removeFullscreenButton() {
+        // 1. Fullscreen 버튼 찾아서 제거
+        const fullscreenButtons = document.querySelectorAll(
+            'button[title*="ullscreen"], button[title*="Fullscreen"], ' +
+            'button[kind="header"], button[kind="headerNoPadding"], ' +
+            '[data-testid="StyledFullScreenButton"], ' +
+            '[data-testid="stFullScreenButton"], ' +
+            '[data-testid="stBaseButton-header"]'
+        );
+        fullscreenButtons.forEach(btn => btn.remove());
+        
+        // 2. Viewer Badge 제거
+        const badges = document.querySelectorAll(
+            'div[class*="viewerBadge"], div[class*="ViewerBadge"], ' +
+            '.viewerBadge_container__1QSob, a[href*="streamlit.io"]'
+        );
+        badges.forEach(badge => badge.remove());
+        
+        // 3. Decoration 제거
+        const decorations = document.querySelectorAll('[data-testid="stDecoration"]');
+        decorations.forEach(deco => deco.remove());
+        
+        // 4. 툴바 제거
+        const toolbars = document.querySelectorAll('[data-testid="stToolbar"]');
+        toolbars.forEach(toolbar => toolbar.remove());
+    }
+    
+    // 페이지 로드 시 실행
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeFullscreenButton);
+    } else {
+        removeFullscreenButton();
+    }
+    
+    // 주기적으로 확인 (동적 생성 대응)
+    setInterval(removeFullscreenButton, 500);
+    
+    // MutationObserver로 DOM 변경 감지
+    const observer = new MutationObserver(removeFullscreenButton);
+    observer.observe(document.body, {childList: true, subtree: true});
+    </script>
     """
-st.markdown(hide_elements, unsafe_allow_html=True)
+st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
