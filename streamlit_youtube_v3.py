@@ -27,54 +27,92 @@ st.set_page_config(
 )
 
 
-# [최종 방어: 저작권 바로 덮어쓰기 (Physical Cover)]
-hide_footer_style = """
+# [최종판] Fullscreen 클릭 이벤트 강제 차단
+hide_elements = """
     <style>
-    /* 1. 기본 메뉴 및 헤더 숨기기 */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* 1. 헤더/푸터 숨김 */
+    header {visibility: hidden !important; height: 0px !important;}
+    footer {visibility: hidden !important; display: none !important;}
     
-    /* 2. 링크 자체를 무력화 시도 */
-    a[href^="https://streamlit.io/cloud"] {
+    /* 2. 툴바 숨김 */
+    [data-testid="stToolbar"],
+    [data-testid="stStatusWidget"],
+    .stAppDeployButton,
+    .viewerBadge_container__1QSob,
+    div[class*="viewerBadge"],
+    a[href*="streamlit.io"] {
         display: none !important;
-        pointer-events: none;
     }
     
-    /* 3. ★ 핵심: 하단 저작권 바 생성 (물리적 차단막) ★ */
-    /* 화면 최하단에 흰색 띠를 생성하여 빨간 버튼을 덮어버립니다. */
-    div[data-testid="stAppViewContainer"]::after {
-        content: "Designed by 돈쭐파파 | YouTube 떡상 채굴기"; /* 여기에 표시할 텍스트 입력 */
-        
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        height: 60px; /* 버튼 높이보다 살짝 높게 설정 */
-        
-        background-color: white; /* 배경색 (다크모드 사용 시 black으로 변경) */
-        color: #888888; /* 글자색 */
-        font-size: 13px;
-        font-weight: bold;
-        
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        
-        /* z-index를 CSS 허용 최대값으로 설정하여 무조건 최상단에 위치 */
-        z-index: 2147483647; 
-        pointer-events: auto; /* 클릭을 이 바가 대신 받음 (뒤에 있는 버튼 클릭 불가) */
-        cursor: default;
-    }
-    
-    /* 4. 모바일 등에서 튀어나오는 iframe 숨김 */
-    iframe[title="streamlit-footer"] {
-        display: none !important;
+    /* 3. Fullscreen 버튼 스타일 */
+    button[title*="ullscreen"],
+    button[title*="Fullscreen"],
+    button[kind="header"],
+    button[kind="headerNoPadding"],
+    [data-testid="StyledFullScreenButton"],
+    [data-testid="stBaseButton-header"] {
+        pointer-events: none !important;
+        opacity: 0.3 !important;
+        cursor: not-allowed !important;
     }
     </style>
+    
+    <script>
+    // JavaScript로 Fullscreen 클릭 이벤트 완전 차단
+    function blockFullscreen() {
+        const selectors = [
+            'button[title*="ullscreen"]',
+            'button[title*="Fullscreen"]', 
+            'button[kind="header"]',
+            'button[kind="headerNoPadding"]',
+            '[data-testid="StyledFullScreenButton"]',
+            '[data-testid="stBaseButton-header"]'
+        ];
+        
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(button => {
+                // 모든 클릭 이벤트 차단
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return false;
+                }, true);
+                
+                // 마우스 이벤트도 차단
+                button.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }, true);
+                
+                // 터치 이벤트 차단
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }, true);
+                
+                // 스타일 강제 적용
+                button.style.pointerEvents = 'none';
+                button.style.opacity = '0.3';
+                button.style.cursor = 'not-allowed';
+            });
+        });
+    }
+    
+    // 즉시 실행
+    blockFullscreen();
+    
+    // 0.5초마다 재실행 (동적 생성 대응)
+    setInterval(blockFullscreen, 500);
+    
+    // DOM 변경 감지
+    const observer = new MutationObserver(blockFullscreen);
+    observer.observe(document.body, {childList: true, subtree: true});
+    </script>
     """
-st.markdown(hide_footer_style, unsafe_allow_html=True)
-
+st.markdown(hide_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
