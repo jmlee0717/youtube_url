@@ -228,9 +228,23 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
         
         while len(results) < target:
             st_text.text(f"채굴 중... ({len(results)}/{target})")
-            params = {'q':keyword, 'part':"id,snippet", 'maxResults':min(50, target-len(results)), 'type':"video", 'pageToken':token, 'order':"relevance"}
+
+            # [수정됨] 기본 파라미터 설정
+            params = {
+                'q': keyword, 
+                'part': "id,snippet", 
+                'maxResults': min(50, target-len(results)), 
+                'type': "video", 
+                'pageToken': token, 
+                'order': "relevance"
+            }
             if _p_after: params['publishedAfter'] = _p_after
             if _p_before: params['publishedBefore'] = _p_before
+
+            # [최적화] 숏폼 모드일 때는 API 차원에서 4분 미만만 가져오도록 1차 필터링 (속도 향상)
+            if _duration_mode == "숏폼 (3분 이하)":
+                params['videoDuration'] = 'short' 
+            # 롱폼일 때는 3~4분 구간 누락 방지를 위해 API 필터를 쓰지 않고 전수조사 후 파이썬에서 거름
             
             res = youtube.search().list(**params).execute()
             v_ids = [i['id']['videoId'] for i in res.get('items', [])]; ch_ids = [i['snippet']['channelId'] for i in res.get('items', [])]
@@ -257,11 +271,16 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
                     elif r >= 50: perf = "👍 양호"
                 
                 # 쇼츠 판단 로직 (2025년 기준)
+                # [중요] 길이 계산 (ISO -> 초 단위)
                 duration_sec = parse_iso_duration(cnt.get('duration',''))
+                is_shorts = duration_sec <= 180  # 3분(180초) 기준
+                # 👇👇 [핵심 수정] 3분 기준 엄격 필터링 로직 👇👇
+                if _duration_mode == "숏폼 (3분 이하)" and duration_sec > 180:
+                    continue # 3분 초과면 버림
+                if _duration_mode == "롱폼 (3분 초과)" and duration_sec <= 180:
+                    continue # 3분 이하면 버림
+                # 👆👆 ------------------------------------- 👆👆
                 
-                # 쇼츠 조건: 180초 이하
-                is_shorts = duration_sec <= 180
-                    
                 results.append({
                     'video_id': vid, 'selected': False,
                     'thumbnail': sn.get('thumbnails',{}).get('medium',{}).get('url',''),
@@ -463,6 +482,26 @@ with st.sidebar:
             else:
                 p_after = start_date.strftime("%Y-%m-%dT00:00:00Z")
                 p_before = end_date.strftime("%Y-%m-%dT23:59:59Z")
+
+    st.caption("영상 길이")
+    # 유튜브 API 기준: short(<4분), medium(4~20분), long(>20분)
+    # 사용자가 이해하기 쉽게 한글로 라벨링
+    dur_option = st.radio(
+        "영상 길이 선택", 
+        ["전체", "숏폼 (3분 이하)", "중장폼 (3분~20분)", "장편 (20분 이상)"],
+        index=0,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+    # 선택된 옵션을 API 파라미터로 매핑
+    dur_map = {
+        "전체": None,
+        "숏폼 (3분 이하)": "short",
+        "중장폼 (3분~20분)": "medium",
+        "장편 (20분 이상)": "long"
+    }
+    selected_dur_param = dur_map[dur_option]
     
     st.write("") # 간격
     if st.button("🔍 검색 시작", type="primary", use_container_width=True):
@@ -478,7 +517,15 @@ with st.sidebar:
 if st.session_state.get('trigger', False):
     st.session_state.trigger = False
     limit_cnt = 50 if usage_mgr.is_pro() else 30
-    res = search_youtube(u_key, kw, limit_cnt, p_after, None)
+    
+    # [수정됨] search_youtube 함수 호출 시 selected_dur_param 전달
+    # (주의: 사이드바 변수인 selected_dur_param을 가져와야 함)
+    
+    # 사이드바 위젯 값은 리런(Rerun) 시 유지되므로 바로 사용 가능
+    # 하지만 안전하게 기본값 처리를 위해 아래와 같이 호출 권장
+    duration_arg = locals().get('selected_dur_param', None) 
+    
+    res = search_youtube(u_key, kw, limit_count, p_after, None, duration_arg)
     if res:
         st.session_state.search_results = pd.DataFrame(res)
         save_state({'search_results':st.session_state.search_results})
