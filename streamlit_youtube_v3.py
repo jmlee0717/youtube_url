@@ -27,8 +27,8 @@ st.set_page_config(
 )
 
 
-# [최종 완결판] JavaScript로 DOM 요소 직접 제거
-hide_streamlit_elements = """
+# [최종판] Fullscreen 클릭 이벤트 강제 차단
+hide_elements = """
     <style>
     /* 1. 헤더/푸터 숨김 */
     header {visibility: hidden !important; height: 0px !important;}
@@ -44,7 +44,7 @@ hide_streamlit_elements = """
         display: none !important;
     }
     
-    /* 3. Fullscreen 버튼 클릭 비활성화 */
+    /* 3. Fullscreen 버튼 스타일 */
     button[title*="ullscreen"],
     button[title*="Fullscreen"],
     button[kind="header"],
@@ -58,50 +58,61 @@ hide_streamlit_elements = """
     </style>
     
     <script>
-    // JavaScript로 Fullscreen 버튼 완전 제거
-    function removeFullscreenButton() {
-        // 1. Fullscreen 버튼 찾아서 제거
-        const fullscreenButtons = document.querySelectorAll(
-            'button[title*="ullscreen"], button[title*="Fullscreen"], ' +
-            'button[kind="header"], button[kind="headerNoPadding"], ' +
-            '[data-testid="StyledFullScreenButton"], ' +
-            '[data-testid="stFullScreenButton"], ' +
+    // JavaScript로 Fullscreen 클릭 이벤트 완전 차단
+    function blockFullscreen() {
+        const selectors = [
+            'button[title*="ullscreen"]',
+            'button[title*="Fullscreen"]', 
+            'button[kind="header"]',
+            'button[kind="headerNoPadding"]',
+            '[data-testid="StyledFullScreenButton"]',
             '[data-testid="stBaseButton-header"]'
-        );
-        fullscreenButtons.forEach(btn => btn.remove());
+        ];
         
-        // 2. Viewer Badge 제거
-        const badges = document.querySelectorAll(
-            'div[class*="viewerBadge"], div[class*="ViewerBadge"], ' +
-            '.viewerBadge_container__1QSob, a[href*="streamlit.io"]'
-        );
-        badges.forEach(badge => badge.remove());
-        
-        // 3. Decoration 제거
-        const decorations = document.querySelectorAll('[data-testid="stDecoration"]');
-        decorations.forEach(deco => deco.remove());
-        
-        // 4. 툴바 제거
-        const toolbars = document.querySelectorAll('[data-testid="stToolbar"]');
-        toolbars.forEach(toolbar => toolbar.remove());
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(button => {
+                // 모든 클릭 이벤트 차단
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return false;
+                }, true);
+                
+                // 마우스 이벤트도 차단
+                button.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }, true);
+                
+                // 터치 이벤트 차단
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }, true);
+                
+                // 스타일 강제 적용
+                button.style.pointerEvents = 'none';
+                button.style.opacity = '0.3';
+                button.style.cursor = 'not-allowed';
+            });
+        });
     }
     
-    // 페이지 로드 시 실행
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', removeFullscreenButton);
-    } else {
-        removeFullscreenButton();
-    }
+    // 즉시 실행
+    blockFullscreen();
     
-    // 주기적으로 확인 (동적 생성 대응)
-    setInterval(removeFullscreenButton, 500);
+    // 0.5초마다 재실행 (동적 생성 대응)
+    setInterval(blockFullscreen, 500);
     
-    // MutationObserver로 DOM 변경 감지
-    const observer = new MutationObserver(removeFullscreenButton);
+    // DOM 변경 감지
+    const observer = new MutationObserver(blockFullscreen);
     observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """
-st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
+st.markdown(hide_elements, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
