@@ -19,6 +19,16 @@ import time
 import random
 import unicodedata  # <--- 이 줄을 추가하세요 (한글 자소 합치기용)
 
+# [CSS 스타일 주입]
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            .stDeployButton {display:none;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # === [1] 기본 설정 및 시크릿 로드 ===
 st.set_page_config(
     page_title="유튜브 떡상 채굴기 v0.1(베타)",
