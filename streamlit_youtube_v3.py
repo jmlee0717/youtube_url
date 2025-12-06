@@ -26,7 +26,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# [핵심] 모든 요소를 강력하게 숨기는 CSS
+# [최종 완결] 모든 툴바, 푸터, 뷰어 배지 강력 삭제
 hide_all_elements = """
     <style>
     /* 1. 최상단 헤더(Header) 숨기기 */
@@ -36,11 +36,9 @@ hide_all_elements = """
     }
     
     /* 2. 하단 푸터(Footer) 통째로 삭제 */
-    /* 이 부분이 'Fullscreen' 버튼과 '빨간 왕관'을 없앱니다 */
     footer {
         visibility: hidden !important;
         display: none !important;
-        height: 0px !important;
     }
     
     /* 3. 우측 하단 툴바 및 프로필 위젯 삭제 */
@@ -48,18 +46,15 @@ hide_all_elements = """
         visibility: hidden !important;
         display: none !important;
     }
-    [data-testid="stStatusWidget"] {
-        visibility: hidden !important;
+    
+    /* 4. ★ 핵심: Fullscreen 버튼과 빨간 로고(뷰어 배지) 삭제 ★ */
+    /* 클래스 이름이 viewerBadge로 시작하거나 포함된 모든 요소를 찾아서 삭제합니다 */
+    div[class*="viewerBadge_container"] {
         display: none !important;
     }
     
-    /* 4. 혹시 모를 배포 버튼 삭제 */
-    .stAppDeployButton {
-        display: none !important;
-    }
-    
-    /* 5. 임베드 모드에서 생기는 하단 바 찌꺼기 제거 */
-    .viewerBadge_container__1QSob {
+    /* 혹시 모를 내부 링크(a 태그)까지 삭제 */
+    a[class*="viewerBadge"] {
         display: none !important;
     }
     </style>
