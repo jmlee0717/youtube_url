@@ -27,41 +27,34 @@ st.set_page_config(
 )
 
 
-# [최종 수정: 화이트아웃 & 클릭 차단]
-hide_and_block_clicks = """
-    <style>
-    /* 1. 모든 메뉴바, 푸터, 헤더 숨김 처리 */
-    header, footer, .stAppDeployButton, [data-testid="stToolbar"] {
-        visibility: hidden !important;
-        display: none !important;
-    }
+# [최후의 수단: 물리적 차단막 생성]
+# 단순 CSS가 아니라, 화면 맨 위에 '실제 흰색 상자'를 얹어버리는 HTML 코드를 주입합니다.
+block_footer_html = """
+<div style="
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    height: 60px;
+    background-color: #ffffff; /* 흰색 배경 (다크모드라면 #0e1117 사용) */
+    z-index: 9999999; /* 그 어떤 요소보다 위에 위치 */
+    pointer-events: auto; /* 마우스 클릭을 이 상자가 다 받아냄 (클릭 차단) */
+"></div>
 
-    /* 2. 스트림릿 로고, 뷰어 배지 강력 삭제 */
+<style>
+    /* 상단 헤더 숨기기 */
+    header[data-testid="stHeader"] { display: none !important; }
+    
+    /* 기존 툴바 및 푸터 숨기기 시도 */
+    footer { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    .stAppDeployButton { display: none !important; }
+    
+    /* 혹시 모를 뷰어 배지 숨기기 */
     div[class*="viewerBadge"] { display: none !important; }
-    a[href*="streamlit"] { display: none !important; }
-    
-    /* 3. ★ 핵심: 물리적 클릭 차단 장벽 (Whiteout Barrier) ★ */
-    /* 화면 맨 아래에 '클릭 불가능한 흰색 박스'를 강제로 고정시킵니다. */
-    /* z-index를 21억(최대치)으로 설정하여 그 어떤 버튼보다 위에 오게 합니다. */
-    div[data-testid="stAppViewContainer"]::after {
-        content: "";
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        height: 60px;  /* 하단 바를 충분히 가릴 높이 */
-        background-color: white; /* 배경색과 일치시킴 (다크모드면 black으로 변경) */
-        z-index: 2147483647; /* CSS 허용 최대값: 무조건 최상단 위치 */
-        pointer-events: auto; /* 마우스 클릭을 이 박스가 다 받아먹음 (클릭 차단) */
-    }
-    
-    /* 4. 혹시 모를 모바일 브라우저용 추가 차단 */
-    iframe[title="streamlit-footer"] {
-        display: none !important;
-    }
-    </style>
-    """
-st.markdown(hide_and_block_clicks, unsafe_allow_html=True)
+</style>
+"""
+st.markdown(block_footer_html, unsafe_allow_html=True)
 
 
 # 이번 달 암호
