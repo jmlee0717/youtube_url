@@ -356,7 +356,7 @@ with st.sidebar:
     saved_key = query_params.get("api_key", "")
     
     # 2. 입력창 생성 (저장된 키를 기본값으로 채워넣음)
-    u_key = st.text_input("API Key", value=saved_key, label_visibility="collapsed", key="api_key_input").strip()
+    u_key = st.text_input("API Key", value=saved_key, type="password", label_visibility="collapsed", key="api_key_input").strip()
     
     # 3. 입력값이 바뀌면 URL 업데이트 (새로고침 대비 저장)
     if u_key != saved_key:
@@ -393,7 +393,7 @@ with st.sidebar:
         """)
         
         st.caption("구독자 비밀번호")
-        pw_input = st.text_input("Password", value=saved_key, label_visibility="collapsed", key="pw_sub")
+        pw_input = st.text_input("Password", value=saved_key, type="password", label_visibility="collapsed", key="pw_sub")
         
         # [수정된 코드] 비밀번호 확인 및 안내 메시지 (링크 동적 변경 적용)
         if pw_input == CURRENT_MONTH_PW:
