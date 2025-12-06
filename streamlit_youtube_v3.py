@@ -27,92 +27,43 @@ st.set_page_config(
 )
 
 
-# [최종판] Fullscreen 클릭 이벤트 강제 차단
-hide_elements = """
+# [클릭 원천 봉쇄 및 시각적 차단]
+hide_and_block_clicks = """
     <style>
-    /* 1. 헤더/푸터 숨김 */
-    header {visibility: hidden !important; height: 0px !important;}
-    footer {visibility: hidden !important; display: none !important;}
-    
-    /* 2. 툴바 숨김 */
-    [data-testid="stToolbar"],
-    [data-testid="stStatusWidget"],
-    .stAppDeployButton,
-    .viewerBadge_container__1QSob,
-    div[class*="viewerBadge"],
-    a[href*="streamlit.io"] {
+    /* 1. 기존 숨김 로직 (최대한 숨김 시도) */
+    header, footer, [data-testid="stToolbar"], .stAppDeployButton {
+        visibility: hidden !important;
         display: none !important;
     }
     
-    /* 3. Fullscreen 버튼 스타일 */
-    button[title*="ullscreen"],
-    button[title*="Fullscreen"],
-    button[kind="header"],
-    button[kind="headerNoPadding"],
-    [data-testid="StyledFullScreenButton"],
-    [data-testid="stBaseButton-header"] {
+    /* 2. ★ 핵심: 하단 영역 클릭 무력화 (Click Killer) ★ */
+    /* 하단 50px 영역의 모든 클릭 이벤트를 무시하게 만듭니다 */
+    footer {
+        pointer-events: none !important; 
+        opacity: 0 !important;
+    }
+    
+    div[class*="viewerBadge"] {
         pointer-events: none !important;
-        opacity: 0.3 !important;
-        cursor: not-allowed !important;
+        opacity: 0 !important;
+    }
+
+    /* 3. ★ 최후의 수단: 하단 화이트 마스킹 (White Mask) ★ */
+    /* 화면 맨 아래에 강제로 흰색 박스를 덧대어 가려버립니다. */
+    div[data-testid="stAppViewContainer"]::after {
+        content: "";
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 60px; /* 하단 바 높이만큼 가림 */
+        background-color: white; /* 배경색과 동일하게 설정 (다크모드면 black) */
+        z-index: 999999; /* 가장 위에 덮어씀 */
+        pointer-events: none; /* 이 박스도 클릭 안 되게 */
     }
     </style>
-    
-    <script>
-    // JavaScript로 Fullscreen 클릭 이벤트 완전 차단
-    function blockFullscreen() {
-        const selectors = [
-            'button[title*="ullscreen"]',
-            'button[title*="Fullscreen"]', 
-            'button[kind="header"]',
-            'button[kind="headerNoPadding"]',
-            '[data-testid="StyledFullScreenButton"]',
-            '[data-testid="stBaseButton-header"]'
-        ];
-        
-        selectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(button => {
-                // 모든 클릭 이벤트 차단
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    return false;
-                }, true);
-                
-                // 마우스 이벤트도 차단
-                button.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }, true);
-                
-                // 터치 이벤트 차단
-                button.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }, true);
-                
-                // 스타일 강제 적용
-                button.style.pointerEvents = 'none';
-                button.style.opacity = '0.3';
-                button.style.cursor = 'not-allowed';
-            });
-        });
-    }
-    
-    // 즉시 실행
-    blockFullscreen();
-    
-    // 0.5초마다 재실행 (동적 생성 대응)
-    setInterval(blockFullscreen, 500);
-    
-    // DOM 변경 감지
-    const observer = new MutationObserver(blockFullscreen);
-    observer.observe(document.body, {childList: true, subtree: true});
-    </script>
     """
-st.markdown(hide_elements, unsafe_allow_html=True)
+st.markdown(hide_and_block_clicks, unsafe_allow_html=True)
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
