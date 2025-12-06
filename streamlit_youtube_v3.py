@@ -91,7 +91,7 @@ st.markdown("""
     
     /* 3. 텍스트(Markdown) 요소들의 위아래 여백을 타이트하게 조정 */
     .stMarkdown p {
-        margin-bottom: 0.1rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
     /* 4. 각 요소 사이의 기본 간격(Gap)을 조금 줄임 */
@@ -855,4 +855,5 @@ if not st.session_state.search_results.empty:
                             thumb_url = f"https://img.youtube.com/vi/{row['video_id']}/maxresdefault.jpg"
                             st.link_button("🖼️ 썸네일", thumb_url, use_container_width=True)
                         if c_b3.button("💬 댓글", key=f"c_{orig_idx}", use_container_width=True): 
+
                             open_comment_modal(row['video_id'], row['title'], u_key)
