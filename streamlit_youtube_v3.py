@@ -525,32 +525,40 @@ if not st.session_state.search_results.empty:
 
     # 4. CSV 다운로드 (우측 끝) - 리스트 뷰에서는 숨김 처리
     with c_top[3]:
-        # [수정됨] 뷰 모드가 '카드'일 때만 다운로드 버튼 표시
-        if view == "카드":
-            sel_count = len(st.session_state.search_results[st.session_state.search_results['selected']])
-            st.caption(f"선택: {sel_count}개")
-            
-            if usage_mgr.is_pro():
-                sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
-                if not sel_rows.empty:
-                    # 👇👇 [수정 핵심] 한글 자소 분리 해결 (NFC 정규화) 👇👇
-                    export_df = sel_rows.copy()
-                    for col in ['title', 'channel']: # 제목과 채널명 컬럼 정규화
-                        if col in export_df.columns:
-                            export_df[col] = export_df[col].apply(
-                                lambda x: unicodedata.normalize('NFC', str(x)) if isinstance(x, str) else x
-                            )
-                    # 👆👆 ------------------------------------------- 👆👆
+        # 1. 현재 세션의 결과 중 'selected'가 True(체크됨)인 행만 가져옵니다.
+        sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
+        sel_count = len(sel_rows)
+        
+        st.caption(f"선택: {sel_count}개")
+        
+        if usage_mgr.is_pro():
+            # 선택된 영상이 1개 이상일 때만 로직 수행
+            if sel_count > 0:
+                export_df = sel_rows.copy()
+                
+                # [안전 장치] 저장 직전 한글 자소 분리(NFC) 재확인
+                for col in ['title', 'channel']: 
+                    if col in export_df.columns:
+                        export_df[col] = export_df[col].apply(
+                            lambda x: unicodedata.normalize('NFC', str(x)) if isinstance(x, str) else x
+                        )
 
-                    csv = export_df[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("📥 CSV 다운로드", csv, "youtube_data.csv", "text/csv", use_container_width=True)
-                else:
-                    st.button("📥 CSV 다운로드", disabled=True, use_container_width=True)
+                # 필요한 컬럼만 뽑아서 CSV 변환
+                csv = export_df[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
+                
+                # 다운로드 버튼 활성화
+                st.download_button(
+                    label="📥 CSV 다운로드", 
+                    data=csv, 
+                    file_name="youtube_selected_data.csv", 
+                    mime="text/csv", 
+                    use_container_width=True
+                )
             else:
-                st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="비밀번호 입력 시 활성화")
+                # 선택된 게 0개면 버튼 비활성화
+                st.button("📥 CSV 다운로드", disabled=True, use_container_width=True, help="리스트의 '선택' 체크박스를 먼저 눌러주세요.")
         else:
-            # 리스트 뷰일 때는 아무것도 표시하지 않음
-            st.empty()
+            st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="구독자 인증 후 사용 가능합니다.")
 
 # === [리스트 뷰 옵션 설정] ===
     # 1. [설정] 전체 옵션 컬럼 정의
