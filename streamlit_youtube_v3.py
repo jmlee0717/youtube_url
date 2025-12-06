@@ -75,6 +75,33 @@ hide_footer_style = """
     """
 st.markdown(hide_footer_style, unsafe_allow_html=True)
 
+# 👇👇 [여기부터 추가] 공백 제거용 CSS 스타일 👇👇
+st.markdown("""
+    <style>
+    /* 1. 메인 페이지 최상단 여백(Padding)을 확 줄입니다 */
+    .block-container {
+        padding-top: 1rem !important; /* 기본값(약 6rem) -> 2rem으로 축소 */
+        padding-bottom: 1rem !important;
+    }
+    
+    /* 2. 제목(H1) 아래의 여백을 줄입니다 */
+    h1 {
+        margin-bottom: -1rem !important; /* 제목 밑을 좀 더 바짝 당김 */
+    }
+    
+    /* 3. 텍스트(Markdown) 요소들의 위아래 여백을 타이트하게 조정 */
+    .stMarkdown p {
+        margin-bottom: 0.1rem !important;
+    }
+    
+    /* 4. 각 요소 사이의 기본 간격(Gap)을 조금 줄임 */
+    div[data-testid="stVerticalBlock"] {
+        gap: 0.5rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# 👆👆 [여기까지 추가] 👆👆
+
 
 # 이번 달 암호
 CURRENT_MONTH_PW = st.secrets.get("MONTHLY_PW", "donjjul0717")
@@ -266,8 +293,10 @@ def run_api_test(api_key):
 
 # 👆👆 [여기까지 추가] 👆👆
 
+
+# 👇👇 [수정 후] - 언더바를 모두 제거하여 변경 시 무조건 새로 검색하게 함 👇👇
 @st.cache_data(show_spinner=False)
-def search_youtube(api_key, keyword, limit_count, _p_after, _p_before, _duration_mode="전체"):
+def search_youtube(api_key, keyword, limit_count, p_after, p_before, duration_mode="전체", min_view=0, min_sub=0):
     if not api_key: return []
     try:
         youtube = build("youtube", "v3", developerKey=api_key)
@@ -275,31 +304,32 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before, _duration
         token = None
         target = min(limit_count, 50)
         
-        pb = st.progress(0); st_text = st.empty()
+        seen_ids = set() # 중복 방지
         
-        while len(results) < target:
-            st_text.text(f"채굴 중... ({len(results)}/{target})")
+        pb = st.progress(0); st_text = st.empty()
+        max_loop_count = 0 
+        
+        while len(results) < target and max_loop_count < 10:
+            max_loop_count += 1
+            st_text.text(f"채굴 중... ({len(results)}/{target}) - 조건에 맞는 영상을 찾는 중입니다.")
 
-            # 기본 파라미터 설정
             params = {
                 'q': keyword, 
                 'part': "id,snippet", 
-                'maxResults': min(50, target-len(results)), 
+                'maxResults': min(50, target-len(results) + 20), 
                 'type': "video", 
                 'pageToken': token, 
                 'order': "relevance"
             }
-            if _p_after: params['publishedAfter'] = _p_after
-            if _p_before: params['publishedBefore'] = _p_before
+            if p_after: params['publishedAfter'] = p_after
+            if p_before: params['publishedBefore'] = p_before
 
-            # [최적화] 숏폼 모드일 때는 API 차원에서 4분 미만만 가져오도록 1차 필터링 (속도 향상)
-            if _duration_mode == "숏폼 (3분 이하)":
+            if duration_mode == "숏폼 (3분 이하)":
                 params['videoDuration'] = 'short' 
             
             res = youtube.search().list(**params).execute()
             v_ids = [i['id']['videoId'] for i in res.get('items', [])]
             
-            # 검색 결과가 없으면 종료
             if not v_ids: break
             
             ch_ids = [i['snippet']['channelId'] for i in res.get('items', [])]
@@ -308,49 +338,86 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before, _duration
             ch_stats = {}
             if ch_ids:
                 c_res = youtube.channels().list(part="statistics", id=','.join(set(ch_ids))).execute()
-                for c in c_res.get('items',[]): ch_stats[c['id']] = {'sub': int(c['statistics'].get('subscriberCount',0)), 'view': int(c['statistics'].get('viewCount',0)), 'vid': int(c['statistics'].get('videoCount',0))}
+                for c in c_res.get('items',[]): 
+                    ch_stats[c['id']] = {
+                        'sub': int(c['statistics'].get('subscriberCount',0)), 
+                        'view': int(c['statistics'].get('viewCount',0)), 
+                        'vid': int(c['statistics'].get('videoCount',0))
+                    }
             
-            # 영상 통계
             v_res = youtube.videos().list(part="snippet,statistics,contentDetails", id=','.join(v_ids)).execute()
             for v in v_res.get('items',[]):
-                vid = v['id']; sn = v['snippet']; stt = v.get('statistics',{}); cnt = v.get('contentDetails',{})
-                vc = int(stt.get('viewCount',0)); cid = sn.get('channelId'); cst = ch_stats.get(cid, {'sub':0, 'view':0, 'vid':0})
-                sub = cst['sub']; avg = cst['view']/cst['vid'] if cst['vid']>0 else 0
+                if len(results) >= target: break
+
+                vid = v['id']
+                if vid in seen_ids: continue # 중복 제거
+                seen_ids.add(vid)
+
+                sn = v['snippet']
+                stt = v.get('statistics',{})
+                cnt = v.get('contentDetails',{})
                 
-                perf = "- "
+                vc = int(stt.get('viewCount',0))
+                cid = sn.get('channelId')
+                cst = ch_stats.get(cid, {'sub':0, 'view':0, 'vid':0})
+                sub = cst['sub']
+                
+                if vc < min_view: continue  
+                if sub < min_sub: continue
+
+                # ---------------------------------------------------------
+                # [1] 성과지표 (Performance): 채널 평균 조회수 대비 성과 (기존 유지)
+                # ---------------------------------------------------------
+                avg = cst['view']/cst['vid'] if cst['vid'] > 0 else 0
+                perf = "-"
                 if avg > 0:
-                    r = (vc - avg)/avg * 100
-                    if r >= 200: perf = "🔥🔥 초대박"
-                    elif r >= 100: perf = "🔥 떡상"
-                    elif r >= 50: perf = "👍 양호"
+                    diff_r = (vc - avg)/avg * 100
+                    if diff_r >= 200: perf = "🔥🔥 초대박"
+                    elif diff_r >= 100: perf = "🔥 떡상"
+                    elif diff_r >= 50: perf = "👍 양호"
+
+                # ---------------------------------------------------------
+                # [2] 떡상지표 (Breakout): 구독자 대비 조회수 비율 + 등급 아이콘(NEW)
+                # ---------------------------------------------------------
+                ratio = vc / sub if sub > 0 else 0
                 
-                # [중요] 길이 계산 (ISO -> 초 단위)
+                # 떡상지표 등급 (4단계)
+                b_grade = ""
+                if ratio >= 5.0: b_grade = "💎 전설"
+                elif ratio >= 2.0: b_grade = "🚀 초대박"
+                elif ratio >= 1.0: b_grade = "🔥 떡상"
+                elif ratio >= 0.5: b_grade = "👌 양호"
+                
                 duration_sec = parse_iso_duration(cnt.get('duration',''))
-                is_shorts = duration_sec <= 180  # 3분(180초) 기준
+                is_shorts = duration_sec <= 180
                 
-                # 👇👇 [핵심 필터링] 3분 기준 엄격 필터링 로직 👇👇
-                if _duration_mode == "숏폼 (3분 이하)" and duration_sec > 180:
-                    continue # 3분 초과면 버림 (API는 4분까지 가져오므로 여기서 한번 더 자름)
-                
-                if _duration_mode == "롱폼 (3분 초과)" and duration_sec <= 180:
-                    continue # 3분 이하면 버림
-                # 👆👆 ------------------------------------- 👆👆
+                if duration_mode == "숏폼 (3분 이하)" and duration_sec > 180: continue 
+                if duration_mode == "롱폼 (3분 초과)" and duration_sec <= 180: continue 
                 
                 results.append({
-                    'video_id': vid, 'selected': False,
+                    'video_id': vid, 
+                    'selected': False,
                     'thumbnail': sn.get('thumbnails',{}).get('medium',{}).get('url',''),
                     'url': f"https://youtube.com/watch?v={vid}",
-                    # 👇👇 [핵심 수정] 가져올 때부터 'NFC'로 강력 접착! 👇👇
                     'title': unicodedata.normalize('NFC', sn.get('title','')), 
                     'channel': unicodedata.normalize('NFC', sn.get('channelTitle','')),
-                    # 👆👆 ------------------------------------------- 👆👆
-                    'view_count': vc, 'subscriber_count': sub, 'comment_count': int(stt.get('commentCount',0)),
+                    'view_count': vc, 
+                    'subscriber_count': sub, 
+                    'comment_count': int(stt.get('commentCount',0)),
                     'published_at': convert_to_kst(sn.get('publishedAt','')),
-                    'view_sub_ratio': vc/sub if sub>0 else 0, 'view_diff': vc-avg,
-                    'performance': perf, 'duration_sec': duration_sec, 'is_shorts': is_shorts
+                    
+                    'view_sub_ratio': ratio,      # 떡상지표 (숫자)
+                    'breakout_grade': b_grade,    # 떡상등급 (아이콘+텍스트) - [NEW]
+                    
+                    'view_diff': vc - avg,
+                    'performance': perf,          # 성과지표 (평균대비)
+                    
+                    'duration_sec': duration_sec, 
+                    'is_shorts': is_shorts
                 })  
             
-            pb.progress(min(len(results)/target, 1.0)); token = res.get('nextPageToken')
+            pb.progress(min(len(results)/target, 1.0))
+            token = res.get('nextPageToken')
             if not token: break
         
         pb.empty(); st_text.empty()
@@ -496,6 +563,14 @@ with st.sidebar:
             p_after = s_d.strftime("%Y-%m-%dT00:00:00Z")
             p_before = e_d.strftime("%Y-%m-%dT23:59:59Z")
 
+    # [추가] 최소 조건 필터
+    st.caption("최소 조건 필터")
+    c_min1, c_min2 = st.columns(2)
+    with c_min1:
+        min_view_input = st.number_input("최소 조회수", min_value=0, value=0, step=1000, help="이 조회수 미만인 영상은 제외합니다.")
+    with c_min2:
+        min_sub_input = st.number_input("최소 구독자", min_value=0, value=0, step=1000, help="이 구독자 수 미만인 채널은 제외합니다.")
+
     # [영상 길이 필터 (3분 기준)]
     st.caption("영상 길이 필터")
     dur_option = st.radio(
@@ -516,24 +591,59 @@ with st.sidebar:
             st.session_state.scripts_map = {}
             usage_mgr.increment_search()
 
-# --- Main Content (함수 호출부) ---
+# === Main Content (함수 호출부) ===
 if st.session_state.get('trigger', False):
     st.session_state.trigger = False
     
-    # 검색 함수 호출 (수정된 인자 전달)
-    res = search_youtube(u_key, kw, limit_cnt, p_after, p_before, dur_option)
+    # 검색 함수 호출
+    res = search_youtube(
+        u_key, kw, limit_cnt, p_after, p_before, dur_option, min_view_input, min_sub_input
+    )
     
     if res:
-        st.session_state.search_results = pd.DataFrame(res)
+        # 1. 일단 결과를 데이터프레임으로 만듭니다.
+        df_temp = pd.DataFrame(res)
+        
+        # 🛡️ [핵심 수정] video_id가 같은 중복 데이터는 여기서 강제로 삭제합니다.
+        # (keep='first'는 첫 번째 발견된 것만 남기고 나머지는 버린다는 뜻입니다)
+        df_temp = df_temp.drop_duplicates(subset=['video_id'], keep='first').reset_index(drop=True)
+        
+        # 2. 중복이 제거된 깔끔한 데이터를 세션에 저장합니다.
+        st.session_state.search_results = df_temp
         save_state({'search_results':st.session_state.search_results})
-        st.toast(f"🎉 채굴 성공! {len(res)}개의 영상을 찾았습니다.", icon="⛏️")
+        
+        # 떡상지표 정렬
+        if 'view_sub_ratio' in st.session_state.search_results.columns:
+            st.session_state.search_results = st.session_state.search_results.sort_values(
+                by='view_sub_ratio', ascending=False
+            ).reset_index(drop=True)
+            
+        # 결과 메시지 (중복 제거 후의 실제 개수를 보여줍니다)
+        st.toast(f"🎉 채굴 완료! 중복을 제외하고 {len(st.session_state.search_results)}개의 영상을 찾았습니다.", icon="⛏️")
         st.balloons()        
-    else: st.warning("결과가 없습니다.")
-
+    else: 
+        st.warning(f"설정하신 조건(조회수 {min_view_input}회 이상, 구독자 {min_sub_input}명 이상)에 맞는 영상을 찾지 못했습니다.")
 # 결과 화면
 if not st.session_state.search_results.empty:
     st.divider()
     
+    # 👇👇 [추가됨] 등급 아이콘 설명 가이드 (Legend) 👇👇
+    with st.expander("ℹ️ 등급 아이콘 설명 보기", expanded=False):
+        st.markdown("""
+        **[떡상지표 등급 기준]** (구독자 수 대비 조회수 비율)
+        * 💎 **전설 (5.0배↑)** : 구독자 수의 5배 이상 조회된 레전드 영상
+        * 🚀 **초대박 (2.0배↑)** : 구독자 수의 2배 이상 조회된 영상
+        * 🔥 **떡상 (1.0배↑)** : 구독자 수보다 조회수가 높음 (확산 성공)
+        * 👌 **양호 (0.5배↑)** : 구독자 수의 절반 이상이 시청함
+        
+        ---
+        **[성과지표 기준]** (채널 평균 조회수 대비)
+        * 🔥🔥 **초대박**: 평소 조회수보다 200% 이상 잘 나옴
+        * 🔥 **떡상**: 평소보다 100% 이상 잘 나옴
+        * 👍 **양호**: 평소보다 50% 이상 잘 나옴
+        """)
+    # 👆👆 ------------------------------------------ 👆👆
+
     # 상단 컨트롤 바 (리스트/카드, 필터, 버튼)
     c_top = st.columns([1.5, 3, 2, 1.5])
     
@@ -545,7 +655,8 @@ if not st.session_state.search_results.empty:
     with c_top[1]:
         c_f1, c_f2 = st.columns([2, 2])
         filter_opt = c_f1.radio("필터", ["전체", "숏폼", "롱폼"], horizontal=True, label_visibility="collapsed")
-        sort_opt = c_f2.selectbox("정렬", ["기본순 (최신날짜)", "조회수 높은순", "구독자 대비 조회수(떡상순)", "성과지표순"], label_visibility="collapsed")
+        # [표준안 적용] 정렬 옵션 명칭 통일 ('떡상지표순')
+        sort_opt = c_f2.selectbox("정렬", ["기본순 (최신날짜)", "조회수 높은순", "떡상지표순", "성과지표순"], label_visibility="collapsed")
     
     # 데이터 필터링 & 정렬 적용
     df = st.session_state.search_results.copy()
@@ -555,7 +666,7 @@ if not st.session_state.search_results.empty:
         df = df[df['is_shorts'] == False]
     
     if "조회수" in sort_opt: df = df.sort_values('view_count', ascending=False)
-    elif "떡상" in sort_opt: df = df.sort_values('view_sub_ratio', ascending=False)
+    elif "떡상" in sort_opt: df = df.sort_values('view_sub_ratio', ascending=False) # 변수명 view_sub_ratio 유지
     elif "성과" in sort_opt: df = df.sort_values('performance', ascending=False)
     else: df = df.sort_values('published_at', ascending=False) # 기본
     
@@ -590,12 +701,11 @@ if not st.session_state.search_results.empty:
                 # 👇👇 [핵심 추가] 화면에 보이는 '정렬 옵션'을 그대로 적용 👇👇
                 if "조회수" in sort_opt: 
                     sel_rows = sel_rows.sort_values('view_count', ascending=False)
-                elif "조회구독비율" in sort_opt: 
+                # [표준안 적용] 정렬 키워드 '떡상지표'로 통일
+                elif "떡상지표" in sort_opt: 
                     sel_rows = sel_rows.sort_values('view_sub_ratio', ascending=False)
                 elif "성과" in sort_opt: 
-                    sel_rows = sel_rows.sort_values('performance', ascending=False) # 문자열 정렬이라 완벽하진 않지만 근사치 제공
-                elif "평균대비차이" in sort_opt: 
-                    sel_rows = sel_rows.sort_values('view_diff', ascending=False)
+                    sel_rows = sel_rows.sort_values('performance', ascending=False)
                 elif "영상길이" in sort_opt: 
                     sel_rows = sel_rows.sort_values('duration_sec', ascending=False)
                 else: 
@@ -625,24 +735,27 @@ if not st.session_state.search_results.empty:
                 st.button("📥 CSV 다운로드", disabled=True, use_container_width=True, help="리스트에서 영상을 먼저 선택해주세요.")
         else:
             st.button("🔒 CSV (구독자용)", disabled=True, use_container_width=True, help="구독자 전용 기능입니다.")
+
 # === [리스트 뷰 옵션 설정] ===
-    # 1. [설정] 전체 옵션 컬럼 정의
+    # 1. [설정] 표시 가능한 컬럼 정의 (떡상등급 추가됨)
     optional_cols = [
         "view_count", "subscriber_count", "comment_count", 
-        "published_at", "performance", "duration_sec", 
-        "view_sub_ratio", "view_diff"
+        "published_at", 
+        "performance",       # 성과지표 (평균 대비)
+        "breakout_grade",    # 떡상등급 (아이콘) [NEW]
+        "view_sub_ratio",    # 떡상지표 (숫자)
+        "duration_sec"
     ]
     
     # 2. [초기화] 세션 상태 안전 초기화
     if "view_options_selected" not in st.session_state:
         st.session_state.view_options_selected = [
-            "view_count", "subscriber_count", "comment_count", 
-            "published_at", "performance"
+            "view_count", "subscriber_count", 
+            "performance", "breakout_grade", "view_sub_ratio" # 기본 선택에 포함
         ]
 
-    # 3. [UI] 컬럼 선택 기능 - 리스트 뷰일 때만 표시
+    # 3. [UI] 컬럼 선택 기능
     if view == "리스트":
-        # 오른쪽 여백 확보 (아이콘과 겹치지 않도록)
         col_multi, col_space = st.columns([0.88, 0.12])
         with col_multi:
             selected_cols = st.multiselect(
@@ -652,41 +765,27 @@ if not st.session_state.search_results.empty:
                 format_func=lambda x: {
                     "view_count": "조회수", "subscriber_count": "구독자수", 
                     "comment_count": "댓글수", "published_at": "발행시간", 
-                    "performance": "성과지표", "duration_sec": "영상길이",
-                    "view_sub_ratio": "조회/구독 비율", "view_diff": "조회수 차이"
+                    "performance": "성과지표(평균비)", 
+                    "breakout_grade": "떡상등급", # [NEW]
+                    "view_sub_ratio": "떡상지표(숫자)",
+                    "duration_sec": "영상길이"
                 }.get(x, x)
             )
-        
-        # 4. 선택값을 session_state에 저장 (뷰 전환 시에도 유지)
         st.session_state.view_options_selected = selected_cols
     else:
-        # 카드 뷰일 때는 저장된 값 사용
         selected_cols = st.session_state.view_options_selected
 
 # === [리스트 뷰] ===
     if view == "리스트":
-        # 4. [적용] 고정 컬럼 + 사용자 선택 컬럼 합치기
         fixed_cols = ["selected", "thumbnail", "url", "title"]
         final_col_order = fixed_cols + selected_cols
 
-        # 5. [표시] 데이터 에디터
+        # CSS 숨김 처리 (그대로 유지)
+        st.markdown("""<style>[data-testid="stDataFrameToolbarButton"]:first-of-type,button[kind="icon"][title*="column"],div[data-testid="stDataFrameToolbar"] button:first-child {display: none !important; visibility: hidden !important;}</style>""", unsafe_allow_html=True)
 
-        # Show/hide columns 아이콘 숨기기
-        st.markdown("""
-            <style>
-            /* Show/hide columns 버튼 숨기기 */
-            [data-testid="stDataFrameToolbarButton"]:first-of-type,
-            button[kind="icon"][title*="column"],
-            button[kind="icon"][title*="Column"],
-            button[aria-label*="column"],
-            button[aria-label*="Column"],
-            div[data-testid="stDataFrameToolbar"] button:first-child {
-                display: none !important;
-                visibility: hidden !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
+        # 👇 [추가] 데이터 개수에 맞춰 높이 자동 계산 (행당 35픽셀 + 헤더 3픽셀)
+        # 최대 1500픽셀까지만 늘어나고, 그 이상은 스크롤 생김
+        dynamic_height = min((len(df) + 1) * 35 + 3, 1500)
 
         st.data_editor(
             df, 
@@ -698,78 +797,62 @@ if not st.session_state.search_results.empty:
                 "url": st.column_config.LinkColumn("URL", max_chars=40, width="small"),
                 "title": st.column_config.TextColumn("제목", width="large"),
                 
-                # --- 동적 컬럼 설정 ---
                 "view_count": st.column_config.NumberColumn("조회수", format="%d"),
                 "subscriber_count": st.column_config.NumberColumn("구독자수", format="%d"),
                 "comment_count": st.column_config.NumberColumn("댓글수", format="%d"),
                 "published_at": st.column_config.TextColumn("발행시간"),
-                "performance": st.column_config.TextColumn("성과지표"),
                 "duration_sec": st.column_config.NumberColumn("길이(초)", format="%d초"),
-                "view_sub_ratio": st.column_config.NumberColumn("조회/구독비", format="%.2f"),
-                "view_diff": st.column_config.NumberColumn("평균대비 차이", format="%d")
+                
+                # [수정] 두 지표 분리 표시
+                "performance": st.column_config.TextColumn("성과지표", help="채널 평균 조회수 대비 성과"),
+                "breakout_grade": st.column_config.TextColumn("떡상등급", help="구독자 대비 조회수 등급"),
+                "view_sub_ratio": st.column_config.NumberColumn("떡상지표", format="%.2f", help="조회수 / 구독자수"),
             },
             disabled=["url", "title"] + optional_cols,
             hide_index=True, 
             use_container_width=True, 
-            height=600, 
+            height=800, 
             on_change=save_editor_changes
         )
 
 # === [카드 뷰] ===
     else:
-        # [수정] 4개씩 끊어서 로우(Row) 단위로 렌더링하여 줄맞춤 강제
-        # 이렇게 하면 윗줄 카드의 높이가 달라도 다음 줄은 항상 수평이 맞습니다.
         for i in range(0, len(df), 4):
-            # 4개씩 데이터 슬라이싱
             batch = df.iloc[i : i+4]
-            cols = st.columns(4) # 매 줄마다 새로운 컬럼 생성
+            cols = st.columns(4) 
             
             for j, (idx, row) in enumerate(batch.iterrows()):
+                orig_idx = row["_original_index"]
+                
                 with cols[j]:
-                    # 버튼이 추가되었으므로 카드 높이를 520 -> 580 정도로 늘려주세요
                     with st.container(border=True, height=580):
-                        # 1. 썸네일
                         st.image(row['thumbnail'], use_container_width=True)
-                        
-                        # 2. 제목
                         st.markdown(f"**[{row['title']}]({row['url']})**", unsafe_allow_html=True)
-                        
-                        # 3. 채널명
                         st.caption(f"{row['channel']}")
                         
-                        # 4. 통계 정보
                         c_stat1, c_stat2 = st.columns(2)
                         c_stat1.caption(f"👁️ {row['view_count']:,}")
                         c_stat2.caption(f"💬 {row['comment_count']:,}")
                         
-                        st.caption(f"Ratio: {row['view_sub_ratio']:.4f} | Diff: {row['view_diff']:,.0f}")
+                        # [핵심 수정] 떡상지표 라인: 아이콘과 숫자를 같이 보여줍니다.
+                        # 예: 💎 17.44 | 구독자: 2,500
+                        grade_icon = row['breakout_grade'].split(" ")[0] if row['breakout_grade'] else ""
+                        st.caption(f"떡상: {grade_icon} {row['view_sub_ratio']:.2f} | 구독자: {row['subscriber_count']:,}")
                         
-                        # 5. 성과 지표
-                        if row['performance'] != "- ": 
-                            st.markdown(f"🚀 **{row['performance']}**")
-                        else: 
-                            st.write("") # 줄맞춤용 공백
+                        # [핵심 수정] 성과지표 라인: 평균 대비 성과가 있다면 표시
+                        # 예: 🔥🔥 초대박 (평균 대비)
+                        if row['performance'] != "-":
+                            st.markdown(f"**성과: {row['performance']}**")
+                        else:
+                            st.write("") # 줄맞춤
 
-                        # 6. 하단 버튼 그룹 (체크박스 | 스크립트 | 썸네일/댓글)
-                        # 공간 확보를 위해 ratio 조정
+                        # 하단 버튼 그룹 (기존 동일)
                         c_b1, c_b2, c_b3 = st.columns([0.6, 2, 1.4])
-                        
-                        # (1) 선택 체크박스
-                        if f"chk_{idx}" not in st.session_state: 
-                            st.session_state[f"chk_{idx}"] = row['selected']
-                        
-                        c_b1.checkbox("선택", key=f"chk_{idx}", on_change=update_sel, args=(df.at[idx, "_original_index"],), label_visibility="collapsed")
-                        
-                        # (2) 스크립트 & 썸네일 버튼 (가운데 컬럼에 세로로 배치)
+                        if f"chk_{orig_idx}" not in st.session_state: st.session_state[f"chk_{orig_idx}"] = row['selected']
+                        c_b1.checkbox("선택", key=f"chk_{orig_idx}", on_change=update_sel, args=(orig_idx,), label_visibility="collapsed")
                         with c_b2:
-                            if st.button("📜 스크립트", key=f"s_{idx}", use_container_width=True):
-                                open_script_modal(row['video_id'], row['title'])
-                            
-                            # [추가됨] 썸네일 다운로드 버튼
+                            if st.button("📜 스크립트", key=f"s_{orig_idx}", use_container_width=True): open_script_modal(row['video_id'], row['title'])
                             thumb_url = f"https://img.youtube.com/vi/{row['video_id']}/maxresdefault.jpg"
-                            st.link_button("🖼️ 썸네일", thumb_url, use_container_width=True, help="고화질 썸네일 보기")
-                        
-                        # (3) 댓글 버튼
-                        if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
+                            st.link_button("🖼️ 썸네일", thumb_url, use_container_width=True)
+                        if c_b3.button("💬 댓글", key=f"c_{orig_idx}", use_container_width=True): 
                             open_comment_modal(row['video_id'], row['title'], u_key)
-
