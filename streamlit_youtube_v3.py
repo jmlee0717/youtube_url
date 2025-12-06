@@ -216,7 +216,7 @@ def run_api_test(api_key):
 # 👆👆 [여기까지 추가] 👆👆
 
 @st.cache_data(show_spinner=False)
-def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
+def search_youtube(api_key, keyword, limit_count, _p_after, _p_before, _duration_mode="전체"):
     if not api_key: return []
     try:
         youtube = build("youtube", "v3", developerKey=api_key)
@@ -229,7 +229,7 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
         while len(results) < target:
             st_text.text(f"채굴 중... ({len(results)}/{target})")
 
-            # [수정됨] 기본 파라미터 설정
+            # 기본 파라미터 설정
             params = {
                 'q': keyword, 
                 'part': "id,snippet", 
@@ -244,11 +244,14 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
             # [최적화] 숏폼 모드일 때는 API 차원에서 4분 미만만 가져오도록 1차 필터링 (속도 향상)
             if _duration_mode == "숏폼 (3분 이하)":
                 params['videoDuration'] = 'short' 
-            # 롱폼일 때는 3~4분 구간 누락 방지를 위해 API 필터를 쓰지 않고 전수조사 후 파이썬에서 거름
             
             res = youtube.search().list(**params).execute()
-            v_ids = [i['id']['videoId'] for i in res.get('items', [])]; ch_ids = [i['snippet']['channelId'] for i in res.get('items', [])]
+            v_ids = [i['id']['videoId'] for i in res.get('items', [])]
+            
+            # 검색 결과가 없으면 종료
             if not v_ids: break
+            
+            ch_ids = [i['snippet']['channelId'] for i in res.get('items', [])]
             
             # 채널 통계
             ch_stats = {}
@@ -270,13 +273,14 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
                     elif r >= 100: perf = "🔥 떡상"
                     elif r >= 50: perf = "👍 양호"
                 
-                # 쇼츠 판단 로직 (2025년 기준)
                 # [중요] 길이 계산 (ISO -> 초 단위)
                 duration_sec = parse_iso_duration(cnt.get('duration',''))
                 is_shorts = duration_sec <= 180  # 3분(180초) 기준
-                # 👇👇 [핵심 수정] 3분 기준 엄격 필터링 로직 👇👇
+                
+                # 👇👇 [핵심 필터링] 3분 기준 엄격 필터링 로직 👇👇
                 if _duration_mode == "숏폼 (3분 이하)" and duration_sec > 180:
-                    continue # 3분 초과면 버림
+                    continue # 3분 초과면 버림 (API는 4분까지 가져오므로 여기서 한번 더 자름)
+                
                 if _duration_mode == "롱폼 (3분 초과)" and duration_sec <= 180:
                     continue # 3분 이하면 버림
                 # 👆👆 ------------------------------------- 👆👆
@@ -291,6 +295,7 @@ def search_youtube(api_key, keyword, limit_count, _p_after, _p_before):
                     'view_sub_ratio': vc/sub if sub>0 else 0, 'view_diff': vc-avg,
                     'performance': perf, 'duration_sec': duration_sec, 'is_shorts': is_shorts
                 })
+            
             pb.progress(min(len(results)/target, 1.0)); token = res.get('nextPageToken')
             if not token: break
         
