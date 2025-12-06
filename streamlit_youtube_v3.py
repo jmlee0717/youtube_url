@@ -17,6 +17,7 @@ import json
 import uuid
 import time
 import random
+import unicodedata  # <--- 이 줄을 추가하세요 (한글 자소 합치기용)
 
 # === [1] 기본 설정 및 시크릿 로드 ===
 st.set_page_config(
@@ -529,7 +530,16 @@ if not st.session_state.search_results.empty:
             if usage_mgr.is_pro():
                 sel_rows = st.session_state.search_results[st.session_state.search_results['selected']]
                 if not sel_rows.empty:
-                    csv = sel_rows[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
+                    # 👇👇 [수정 핵심] 한글 자소 분리 해결 (NFC 정규화) 👇👇
+                    export_df = sel_rows.copy()
+                    for col in ['title', 'channel']: # 제목과 채널명 컬럼 정규화
+                        if col in export_df.columns:
+                            export_df[col] = export_df[col].apply(
+                                lambda x: unicodedata.normalize('NFC', str(x)) if isinstance(x, str) else x
+                            )
+                    # 👆👆 ------------------------------------------- 👆👆
+
+                    csv = export_df[['title', 'url', 'view_count', 'published_at']].to_csv(index=False).encode('utf-8-sig')
                     st.download_button("📥 CSV 다운로드", csv, "youtube_data.csv", "text/csv", use_container_width=True)
                 else:
                     st.button("📥 CSV 다운로드", disabled=True, use_container_width=True)
