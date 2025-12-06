@@ -27,119 +27,53 @@ st.set_page_config(
 )
 
 
-# [최종판] 프로필 아이콘 및 메뉴 완전 차단
-hide_elements = """
+# [최종 방어: 저작권 바로 덮어쓰기 (Physical Cover)]
+hide_footer_style = """
     <style>
-    /* 1. 헤더/푸터 숨김 */
-    header {visibility: hidden !important; height: 0px !important;}
-    footer {visibility: hidden !important; display: none !important;}
+    /* 1. 기본 메뉴 및 헤더 숨기기 */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    /* 2. 툴바 숨김 */
-    [data-testid="stToolbar"],
-    [data-testid="stStatusWidget"],
-    .stAppDeployButton {
+    /* 2. 링크 자체를 무력화 시도 */
+    a[href^="https://streamlit.io/cloud"] {
         display: none !important;
+        pointer-events: none;
     }
     
-    /* 3. "Built with Streamlit" 링크 차단 */
-    .viewerBadge_container__1QSob,
-    .viewerBadge_link__1S137,
-    div[class*="viewerBadge"],
-    a[href*="streamlit.io"],
-    footer a {
-        display: none !important;
-        pointer-events: none !important;
+    /* 3. ★ 핵심: 하단 저작권 바 생성 (물리적 차단막) ★ */
+    /* 화면 최하단에 흰색 띠를 생성하여 빨간 버튼을 덮어버립니다. */
+    div[data-testid="stAppViewContainer"]::after {
+        content: "Designed by 돈쭐파파 | YouTube 떡상 채굴기"; /* 여기에 표시할 텍스트 입력 */
+        
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 60px; /* 버튼 높이보다 살짝 높게 설정 */
+        
+        background-color: white; /* 배경색 (다크모드 사용 시 black으로 변경) */
+        color: #888888; /* 글자색 */
+        font-size: 13px;
+        font-weight: bold;
+        
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        /* z-index를 CSS 허용 최대값으로 설정하여 무조건 최상단에 위치 */
+        z-index: 2147483647; 
+        pointer-events: auto; /* 클릭을 이 바가 대신 받음 (뒤에 있는 버튼 클릭 불가) */
+        cursor: default;
     }
     
-    /* 4. 프로필 아이콘/메뉴 완전 차단 (핵심!) */
-    [data-testid="stHeaderActionElements"],
-    button[kind="header"],
-    button[kind="headerNoPadding"],
-    header button,
-    header div[data-testid],
-    div[data-baseweb="popover"],
-    [class*="UserMenu"],
-    [class*="userMenu"],
-    button[aria-label*="user"],
-    button[aria-label*="User"],
-    button[aria-label*="profile"],
-    button[aria-label*="Profile"],
-    button[aria-label*="account"],
-    button[aria-label*="Account"] {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        opacity: 0 !important;
-    }
-    
-    /* 5. Fullscreen 버튼도 차단 */
-    button[title*="ullscreen"],
-    a[href*="utm_medium=oembed"] {
-        display: none !important;
-        pointer-events: none !important;
-    }
-    
-    /* 6. 우측 상단 모든 버튼 차단 (강력 보험) */
-    header > div > div:last-child,
-    header > div > div:nth-last-child(1),
-    header > div > div:nth-last-child(2) {
+    /* 4. 모바일 등에서 튀어나오는 iframe 숨김 */
+    iframe[title="streamlit-footer"] {
         display: none !important;
     }
     </style>
-    
-    <script>
-    // JavaScript로 프로필 관련 요소 완전 제거
-    function removeProfileElements() {
-        // 1. 프로필 아이콘/메뉴 제거
-        const profileSelectors = [
-            '[data-testid="stHeaderActionElements"]',
-            'button[kind="header"]',
-            'button[kind="headerNoPadding"]',
-            'header button',
-            '[class*="UserMenu"]',
-            '[class*="userMenu"]',
-            'button[aria-label*="user"]',
-            'button[aria-label*="profile"]',
-            'button[aria-label*="account"]'
-        ];
-        
-        profileSelectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(el => {
-                el.remove();
-            });
-        });
-        
-        // 2. Popover 메뉴 제거
-        document.querySelectorAll('div[data-baseweb="popover"]').forEach(el => {
-            el.remove();
-        });
-        
-        // 3. Fullscreen/embed 링크 제거
-        document.querySelectorAll('a[href*="utm_medium=oembed"], button[title*="ullscreen"]').forEach(el => {
-            el.remove();
-        });
-        
-        // 4. header의 우측 div들 제거
-        document.querySelectorAll('header > div > div:last-child').forEach(el => {
-            if (el.querySelector('button')) {
-                el.remove();
-            }
-        });
-    }
-    
-    // 즉시 실행
-    removeProfileElements();
-    
-    // 0.3초마다 재실행
-    setInterval(removeProfileElements, 300);
-    
-    // DOM 변경 감지
-    const observer = new MutationObserver(removeProfileElements);
-    observer.observe(document.body, {childList: true, subtree: true});
-    </script>
     """
-st.markdown(hide_elements, unsafe_allow_html=True)
-
+st.markdown(hide_footer_style, unsafe_allow_html=True)
 
 
 # 이번 달 암호
@@ -838,3 +772,4 @@ if not st.session_state.search_results.empty:
                         # (3) 댓글 버튼
                         if c_b3.button("💬 댓글", key=f"c_{idx}", use_container_width=True):
                             open_comment_modal(row['video_id'], row['title'], u_key)
+
